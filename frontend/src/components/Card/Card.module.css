@@ -1,0 +1,40 @@
+.card {
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+
+/* variants */
+.default {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+}
+
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-default);
+}
+
+.elevated {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+}
+
+/* padding */
+.pad-sm { padding: var(--space-3); }
+.pad-md { padding: var(--space-5); }
+.pad-lg { padding: var(--space-8); }
+
+/* hover */
+.hoverable {
+  cursor: pointer;
+}
+
+.hoverable:hover {
+  background: var(--surface-card-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}

@@ -1,0 +1,79 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-default);
+  transition: all var(--transition-fast);
+}
+
+.container:focus-within {
+  border-color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.05);
+  box-shadow: 0 0 0 3px var(--accent-primary-muted);
+}
+
+.hasError {
+  border-color: var(--error);
+}
+
+.hasError:focus-within {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px var(--error-bg);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  height: 100%;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 100px var(--bg-secondary) inset;
+  -webkit-text-fill-color: var(--text-primary);
+}
+
+.error {
+  font-size: 0.75rem;
+  color: var(--error);
+  margin-top: 2px;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
