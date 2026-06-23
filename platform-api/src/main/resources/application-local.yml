@@ -1,0 +1,40 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont Platform API — Local Development Overrides
+# ═══════════════════════════════════════════════════════════════
+# Activate with: mvn spring-boot:run -Dspring-boot.run.profiles=local
+# Connects to the Docker Compose services (postgres, redis, prometheus).
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gamecont
+    username: gamecont
+    password: gamecont_dev_password
+
+  jpa:
+    show-sql: true                # Show SQL in console during development
+    hibernate:
+      ddl-auto: validate
+
+gamecont:
+  jwt:
+    secret: gamecont-local-dev-secret-key-this-is-only-for-local-development-256-bits
+    expiration-ms: 604800000      # 7 days for convenience during local dev
+
+  kubernetes:
+    namespace: gamecont-servers
+    # For local K8s testing, ensure KUBECONFIG points to your local cluster
+    # e.g., Kind: ~/.kube/config or K3s: /etc/rancher/k3s/k3s.yaml
+
+  prometheus:
+    url: http://localhost:9090
+
+  server-defaults:
+    max-servers-per-user: 5       # More generous for local testing
+
+# ── More verbose logging for development ────────────────────
+logging:
+  level:
+    com.gamecont: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

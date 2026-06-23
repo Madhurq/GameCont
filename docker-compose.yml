@@ -1,0 +1,62 @@
+# GameCont — Local Development Stack
+# Usage: docker compose up -d
+#
+# ⚠️ RESOURCE NOTE: This runs PostgreSQL + Redis + Prometheus locally.
+# On AWS Free Tier (t3.micro, 1 GB RAM), these services run inside K3s
+# with tighter resource limits. See k8s/ manifests for production config.
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────
+  # In production: AWS RDS db.t3.micro (Free Tier: 750 hrs/mo, 20 GB gp2)
+  postgres:
+    image: postgres:16-alpine
+    container_name: gamecont-postgres
+    environment:
+      POSTGRES_DB: gamecont
+      POSTGRES_USER: gamecont
+      POSTGRES_PASSWORD: gamecont_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gamecont"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ──────────────────────────────────────────────────
+  # Used for session caching and rate limiting.
+  # In production: runs as a K3s pod with 64 MB memory limit.
+  redis:
+    image: redis:7-alpine
+    container_name: gamecont-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Prometheus ─────────────────────────────────────────────
+  # Scrapes platform API actuator + game server metrics sidecars.
+  # In production: runs in gamecont-platform namespace on K3s.
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: gamecont-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus-local.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+
+volumes:
+  postgres_data:
+  prometheus_data:

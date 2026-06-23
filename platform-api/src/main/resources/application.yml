@@ -1,0 +1,103 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont Platform API — Application Configuration
+# ═══════════════════════════════════════════════════════════════
+# This is the PRODUCTION config. Local overrides are in application-local.yml.
+# On AWS Free Tier, this runs on a t3.micro (1 GB RAM) with K3s.
+
+server:
+  port: 8080
+  shutdown: graceful  # Allow in-flight requests to complete on shutdown
+
+spring:
+  application:
+    name: gamecont-platform
+
+  # ── Database (PostgreSQL) ──────────────────────────────────
+  # Production: AWS RDS db.t3.micro (Free Tier: 750 hrs/mo, 20 GB gp2)
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:gamecont}
+    username: ${DB_USERNAME:gamecont}
+    password: ${DB_PASSWORD:gamecont_dev_password}
+    hikari:
+      maximum-pool-size: 5        # Keep low for t3.micro memory constraints
+      minimum-idle: 2
+      connection-timeout: 20000
+      idle-timeout: 300000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate           # Flyway handles migrations, Hibernate only validates
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # ── Flyway Migrations ─────────────────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # ── Jackson (JSON) ────────────────────────────────────────
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false   # ISO-8601 format
+    default-property-inclusion: non_null  # Don't serialize nulls
+
+# ── JWT Configuration ──────────────────────────────────────
+gamecont:
+  jwt:
+    secret: ${JWT_SECRET:gamecont-dev-secret-key-change-in-production-must-be-at-least-256-bits-long}
+    expiration-ms: 86400000  # 24 hours
+
+  # ── Kubernetes Configuration ──────────────────────────────
+  kubernetes:
+    namespace: gamecont-servers
+    platform-namespace: gamecont-platform
+    # When running inside K3s, fabric8 auto-detects the in-cluster config.
+    # For local dev, set KUBECONFIG env var to point to your kubeconfig file.
+
+  # ── Game Server Defaults ──────────────────────────────────
+  server-defaults:
+    cpu-request: "250m"
+    cpu-limit: "500m"
+    memory-request: "256Mi"
+    memory-limit: "512Mi"
+    storage-gb: 2
+    idle-timeout-minutes: 10
+    max-servers-per-user: 3
+
+  # ── Prometheus ────────────────────────────────────────────
+  prometheus:
+    url: ${PROMETHEUS_URL:http://localhost:9090}
+
+# ── Spring Boot Actuator ────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# ── API Documentation ──────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+# ── Logging ─────────────────────────────────────────────────
+logging:
+  level:
+    com.gamecont: INFO
+    io.fabric8.kubernetes: WARN
+    org.springframework.security: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
