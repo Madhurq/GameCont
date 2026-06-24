@@ -1,0 +1,25 @@
+# Kind cluster configuration for GameCont local development
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  # Map ports 30000-30005 to the host so you can connect your Minecraft client
+  - containerPort: 30000
+    hostPort: 30000
+    protocol: TCP
+  - containerPort: 30001
+    hostPort: 30001
+    protocol: TCP
+  - containerPort: 30002
+    hostPort: 30002
+    protocol: TCP
+  - containerPort: 30003
+    hostPort: 30003
+    protocol: TCP
+  - containerPort: 30004
+    hostPort: 30004
+    protocol: TCP
+  - containerPort: 30005
+    hostPort: 30005
+    protocol: TCP

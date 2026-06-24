@@ -9,7 +9,7 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 var(--space-6);
-  height: 60px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -37,16 +37,18 @@
 .logoIcon {
   font-size: 1.25rem;
   color: var(--accent-primary);
+  filter: drop-shadow(0 0 6px var(--accent-primary-glow));
 }
 
 .logoText {
   font-family: var(--font-heading);
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 800;
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  letter-spacing: 0.06em;
 }
 
 .links {
@@ -58,21 +60,26 @@
 .link {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--font-heading);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .link:hover {
-  color: var(--text-primary);
+  color: var(--accent-primary);
   background: var(--surface-card-hover);
+  text-shadow: 0 0 6px var(--accent-primary-glow);
 }
 
 .active {
   color: var(--accent-primary);
   background: var(--accent-primary-muted);
+  text-shadow: 0 0 6px var(--accent-primary-glow);
 }
 
 .right {
@@ -84,19 +91,22 @@
 .avatar {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: var(--accent-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-inverse);
   flex-shrink: 0;
+  box-shadow: 0 0 6px var(--accent-primary-glow);
 }
 
 .username {
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
   color: var(--text-muted);
+  letter-spacing: 0.02em;
 }

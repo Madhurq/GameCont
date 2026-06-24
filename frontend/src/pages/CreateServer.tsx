@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { createServer } from '../services/api';
+import { createServer, isSimulatorMode } from '../services/api';
 import { Button } from '../components/Button/Button';
 import { Input } from '../components/Input/Input';
 import { Card } from '../components/Card/Card';
@@ -78,10 +78,22 @@ export function CreateServer() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Create Server</h1>
-          <p className={styles.subtitle}>Provision a new game server</p>
+          <h1 className={styles.title}>
+            <span className={styles.titlePrefix}>&gt; </span>
+            Deploy Server
+          </h1>
+          <p className={styles.subtitle}>Provision a new K8s game server instance</p>
         </div>
       </div>
+
+      {isSimulatorMode() && (
+        <div className="simulator-banner">
+          <span className="sim-icon">⚡</span>
+          <div className="sim-text">
+            <span className="sim-label">Simulator Mode</span> — Server will be created in local simulation.
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className={styles.form} noValidate>
         <Card variant="glass" padding="lg" className={styles.section}>
@@ -195,9 +207,9 @@ export function CreateServer() {
         </Card>
 
         <div className={styles.actions}>
-          <Button variant="ghost" onClick={() => navigate('/')}>Cancel</Button>
+          <Button variant="ghost" onClick={() => navigate('/dashboard')}>&gt; Cancel</Button>
           <Button type="submit" loading={mutation.isPending} icon={<span>🚀</span>}>
-            Deploy Server
+            &gt; Deploy Server
           </Button>
         </div>
       </form>

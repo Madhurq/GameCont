@@ -22,8 +22,8 @@ export function Navbar() {
           </button>
           <div className={styles.links}>
             <button
-              className={`${styles.link} ${location.pathname === '/' || location.pathname.startsWith('/servers') ? styles.active : ''}`}
-              onClick={() => navigate('/')}
+              className={`${styles.link} ${location.pathname === '/dashboard' || (location.pathname.startsWith('/servers') && location.pathname !== '/servers/create') ? styles.active : ''}`}
+              onClick={() => navigate('/dashboard')}
               type="button"
             >
               Dashboard
@@ -33,7 +33,7 @@ export function Navbar() {
               onClick={() => navigate('/servers/create')}
               type="button"
             >
-              New Server
+              + Deploy
             </button>
           </div>
         </div>

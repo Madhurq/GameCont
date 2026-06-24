@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchServer } from '../services/api';
+import { isSimulatorMode } from '../services/api';
 import { useMetricsPolling } from '../hooks/useMetricsPolling';
 import { useServerActions } from '../hooks/useServerActions';
 import { useToast } from '../hooks/useToast';
@@ -91,8 +92,8 @@ export function ServerDetail() {
       <div className={styles.page}>
         <div className={styles.center}>
           <span className={styles.errorIcon}>⚠</span>
-          <p className={styles.errorText}>Server not found</p>
-          <Button variant="ghost" onClick={() => navigate('/')}>Back to Dashboard</Button>
+          <p className={styles.errorText}>[ERR] Server not found</p>
+          <Button variant="ghost" onClick={() => navigate('/dashboard')}>&gt; Back to Dashboard</Button>
         </div>
       </div>
     );
@@ -100,7 +101,7 @@ export function ServerDetail() {
 
   return (
     <div className={styles.page}>
-      <button className={styles.back} onClick={() => navigate('/')}>← Back</button>
+      <button className={styles.back} onClick={() => navigate('/dashboard')}>← Back</button>
 
       <ConfirmModal
         open={!!confirmAction}
@@ -113,25 +114,38 @@ export function ServerDetail() {
         onCancel={() => setConfirmAction(null)}
       />
 
+      {/* Simulator banner */}
+      {isSimulatorMode() && (
+        <div className="simulator-banner">
+          <span className="sim-icon">⚡</span>
+          <div className="sim-text">
+            <span className="sim-label">Simulator Mode</span> — Data shown is simulated.
+          </div>
+        </div>
+      )}
+
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={styles.titleRow}>
             <StatusDot status={server.status} size="lg" />
-            <h1 className={styles.title}>{server.name}</h1>
+            <h1 className={styles.title}>
+              <span className={styles.titlePrefix}>&gt; </span>
+              {server.name}
+            </h1>
           </div>
           <div className={styles.meta}>
             <Badge variant={statusBadgeVariant[server.status]} pulse={server.status === 'STARTING' || server.status === 'STOPPING'}>
               {server.status}
             </Badge>
-            <span className={styles.separator}>|</span>
+            <span className={styles.separator}>│</span>
             <span className={styles.type}>{server.gameType.replace(/_/g, ' ')}</span>
-            <span className={styles.separator}>|</span>
+            <span className={styles.separator}>│</span>
             <span className={styles.region}>{server.region}</span>
           </div>
         </div>
 
         {server.connectAddress && (
-          <Card variant="glass" padding="sm" className={styles.addressCard}>
+          <Card variant="glass" padding="sm" className={`${styles.addressCard} cyber-frame`}>
             <span className={styles.addressLabel}>Connect</span>
             <span className={styles.addressValue}>{server.connectAddress}</span>
             <button className={styles.copyBtn} onClick={handleCopy} title="Copy address">
@@ -147,18 +161,18 @@ export function ServerDetail() {
         {server.status === 'RUNNING' && (
           <>
             <Button variant="danger" size="sm" loading={actionLoading === 'stop'} onClick={() => setConfirmAction('stop')}>
-              Stop
+              &gt; Stop
             </Button>
             <Button variant="secondary" size="sm" loading={actionLoading === 'restart'} onClick={() => setConfirmAction('restart')}>
-              Restart
+              &gt; Restart
             </Button>
           </>
         )}
         {(server.status === 'STOPPED' || server.status === 'SLEEPING') && (
-          <Button size="sm" loading={actionLoading === 'start'} onClick={handleStart}>Start</Button>
+          <Button size="sm" loading={actionLoading === 'start'} onClick={handleStart}>&gt; Start</Button>
         )}
         {server.status === 'STARTING' && (
-          <span className={styles.startingNote}>Server is starting up...</span>
+          <span className={styles.startingNote}>Initializing server instance...</span>
         )}
       </div>
 
@@ -171,27 +185,27 @@ export function ServerDetail() {
           </>
         ) : (
           <>
-            <MetricChart title="TPS" data={metrics.tps} color="#10b981" formatValue={(v) => v.toFixed(1)} />
-            <MetricChart title="Players" data={metrics.players} color="#3b82f6" />
+            <MetricChart title="TPS" data={metrics.tps} color="#00ff66" formatValue={(v) => v.toFixed(1)} />
+            <MetricChart title="Players" data={metrics.players} color="#00e5ff" />
             <MetricChart title="Memory" data={metrics.memory} color="#8b5cf6" unit="MB" />
           </>
         )}
       </div>
 
       <div className={styles.resources}>
-        <Card variant="glass" padding="md" className={styles.resCard}>
+        <Card variant="glass" padding="md" className={`${styles.resCard} cyber-frame`}>
           <span className={styles.resLabel}>CPU Limit</span>
           <span className={styles.resValue}>{server.cpuLimit}</span>
         </Card>
-        <Card variant="glass" padding="md" className={styles.resCard}>
+        <Card variant="glass" padding="md" className={`${styles.resCard} cyber-frame`}>
           <span className={styles.resLabel}>Memory Limit</span>
           <span className={styles.resValue}>{server.memoryLimit}</span>
         </Card>
-        <Card variant="glass" padding="md" className={styles.resCard}>
+        <Card variant="glass" padding="md" className={`${styles.resCard} cyber-frame`}>
           <span className={styles.resLabel}>Storage</span>
           <span className={styles.resValue}>{server.storageGb} GB</span>
         </Card>
-        <Card variant="glass" padding="md" className={styles.resCard}>
+        <Card variant="glass" padding="md" className={`${styles.resCard} cyber-frame`}>
           <span className={styles.resLabel}>Max Players</span>
           <span className={styles.resValue}>{server.maxPlayers}</span>
         </Card>

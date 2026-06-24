@@ -6,40 +6,40 @@ const features = [
   {
     icon: '⚡',
     title: 'One-Click Deploy',
-    desc: 'Spin up game servers in seconds. Support for Minecraft, Valheim, Terraria, and more with pre-configured templates.',
+    desc: 'Spin up game servers in seconds. Pre-configured templates for Minecraft, Valheim, and more.',
   },
   {
-    icon: '📊',
+    icon: '📡',
     title: 'Live Monitoring',
-    desc: 'Real-time CPU, memory, and player metrics. Know exactly what your servers are doing at a glance.',
+    desc: 'Real-time CPU, memory, TPS and player metrics. Complete server telemetry at a glance.',
   },
   {
     icon: '🛡️',
     title: 'DDoS Protection',
-    desc: 'Enterprise-grade mitigation built in. Your players stay connected no matter what.',
+    desc: 'Enterprise-grade traffic mitigation built in. Your players stay connected no matter what.',
   },
   {
-    icon: '🔄',
-    title: 'Auto Backups',
-    desc: 'Scheduled snapshots with one-click restore. Never lose your world saves again.',
+    icon: '⏱',
+    title: 'Auto-Sleep & Wake',
+    desc: 'Servers auto-hibernate when idle and wake on player connect. Zero-cost downtime.',
   },
   {
-    icon: '🌍',
+    icon: '🌐',
     title: 'Global Regions',
-    desc: 'Deploy across北美, Europe, Asia, and Australia. Low latency for every player.',
+    desc: 'Deploy across North America, Europe, and Asia Pacific. Sub-20ms latency guaranteed.',
   },
   {
-    icon: '🎮',
-    title: 'Console Access',
-    desc: 'Full terminal console with live output. Execute commands, monitor logs, manage plugins.',
+    icon: '🖥️',
+    title: 'Terminal Console',
+    desc: 'Full STOMP WebSocket console with live log streaming. Execute commands in real-time.',
   },
 ];
 
 const stats = [
-  { value: '99.9%', label: 'Uptime' },
-  { value: '15ms', label: 'Avg Ping' },
-  { value: '50K+', label: 'Servers' },
-  { value: '2M+', label: 'Players' },
+  { value: '99.9%', label: 'Uptime SLA' },
+  { value: '<15ms', label: 'Avg Latency' },
+  { value: '50K+', label: 'Servers Deployed' },
+  { value: '2M+', label: 'Players Online' },
 ];
 
 export function Landing() {
@@ -47,7 +47,7 @@ export function Landing() {
 
   return (
     <div className={styles.page}>
-      {/* Nav */}
+      {/* ── Nav ────────────────────────────────────────────────── */}
       <nav className={styles.nav}>
         <div className={styles.navInner}>
           <div className={styles.logo}>
@@ -67,31 +67,48 @@ export function Landing() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* ── Hero ───────────────────────────────────────────────── */}
       <section className={styles.hero}>
         <div className={styles.heroBg}>
           <div className={styles.orb1} />
           <div className={styles.orb2} />
           <div className={styles.orb3} />
+          <div className={styles.gridLines} />
         </div>
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
             <span className={styles.badgeDot} />
-            Game Server Control Platform
+            <span className={styles.badgeText}>Game Server Control Platform</span>
           </div>
           <h1 className={styles.heroTitle}>
-            Command Your{' '}
+            <span className={styles.heroLine1}>Command Your</span>
             <span className={styles.heroHighlight}>Game Servers</span>
-            <br />
-            From One Place
+            <span className={styles.heroLine2}>From One Terminal</span>
           </h1>
           <p className={styles.heroSub}>
             Deploy, monitor, and manage game servers across the globe with
-            blazing-fast performance, DDoS protection, and real-time insights.
+            Kubernetes orchestration, real-time WebSocket logs, and zero-downtime updates.
           </p>
+          <div className={styles.heroTerminal}>
+            <div className={styles.termHeader}>
+              <span className={styles.termDot} style={{ background: '#ff5f57' }} />
+              <span className={styles.termDot} style={{ background: '#febc2e' }} />
+              <span className={styles.termDot} style={{ background: '#28c840' }} />
+              <span className={styles.termTitle}>gamecont-cli</span>
+            </div>
+            <div className={styles.termBody}>
+              <span className={styles.termPrompt}>$</span>
+              <span className={styles.termCmd}> gamecont deploy --game minecraft --region us-east-1</span>
+              <br />
+              <span className={styles.termOutput}>✓ Server "survival-world" deployed in 4.2s</span>
+              <br />
+              <span className={styles.termOutput}>✓ Connect: gamecont.io:30001</span>
+              <span className={styles.termCursor} />
+            </div>
+          </div>
           <div className={styles.heroActions}>
             <Button size="lg" onClick={() => navigate('/register')}>
-              Start Free Trial
+              &gt; Start Free Trial
             </Button>
             <Button variant="secondary" size="lg" onClick={() => navigate('/login')}>
               Sign In
@@ -99,19 +116,19 @@ export function Landing() {
           </div>
           <div className={styles.heroMeta}>
             <span>No credit card required</span>
-            <span className={styles.metaSep}>•</span>
+            <span className={styles.metaSep}>·</span>
             <span>Free tier included</span>
-            <span className={styles.metaSep}>•</span>
+            <span className={styles.metaSep}>·</span>
             <span>Cancel anytime</span>
           </div>
         </div>
       </section>
 
-      {/* Stats */}
+      {/* ── Stats ──────────────────────────────────────────────── */}
       <section id="stats" className={styles.stats}>
         <div className={styles.statsGrid}>
           {stats.map((s) => (
-            <div key={s.label} className={styles.statCard}>
+            <div key={s.label} className={`${styles.statCard} cyber-frame`}>
               <span className={styles.statValue}>{s.value}</span>
               <span className={styles.statLabel}>{s.label}</span>
             </div>
@@ -119,7 +136,7 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Features */}
+      {/* ── Features ───────────────────────────────────────────── */}
       <section id="features" className={styles.features}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>
@@ -132,7 +149,7 @@ export function Landing() {
         </div>
         <div className={styles.featuresGrid}>
           {features.map((f) => (
-            <div key={f.title} className={styles.featureCard}>
+            <div key={f.title} className={`${styles.featureCard} cyber-frame`}>
               <span className={styles.featureIcon}>{f.icon}</span>
               <h3 className={styles.featureTitle}>{f.title}</h3>
               <p className={styles.featureDesc}>{f.desc}</p>
@@ -141,23 +158,23 @@ export function Landing() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* ── CTA ────────────────────────────────────────────────── */}
       <section className={styles.cta}>
         <div className={styles.ctaBg}>
           <div className={styles.ctaOrb} />
         </div>
         <div className={styles.ctaContent}>
-          <h2 className={styles.ctaTitle}>Ready to take control?</h2>
+          <h2 className={styles.ctaTitle}>&gt; Ready to take control?</h2>
           <p className={styles.ctaSub}>
-            Join thousands of server owners. Deploy your first server in under a minute.
+            Join thousands of server operators. Deploy your first server in under a minute.
           </p>
           <Button size="lg" onClick={() => navigate('/register')}>
-            Get Started Free
+            &gt; Initialize Server
           </Button>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ── Footer ─────────────────────────────────────────────── */}
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div className={styles.footerLeft}>

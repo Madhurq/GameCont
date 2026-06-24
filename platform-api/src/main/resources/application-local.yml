@@ -6,7 +6,7 @@
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/gamecont
+    url: jdbc:postgresql://localhost:5433/gamecont
     username: gamecont
     password: gamecont_dev_password
 

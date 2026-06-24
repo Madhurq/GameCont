@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import com.gamecont.platform.model.GameServer;
+import com.gamecont.platform.repository.GameServerRepository;
 
 import java.util.Map;
 
@@ -24,27 +26,33 @@ public class ServerMetricsService {
     private static final Logger log = LoggerFactory.getLogger(ServerMetricsService.class);
 
     private final WebClient prometheusClient;
+    private final GameServerRepository serverRepo;
 
-    public ServerMetricsService(GameContProperties properties) {
+    public ServerMetricsService(GameContProperties properties, GameServerRepository serverRepo) {
         this.prometheusClient = WebClient.builder()
                 .baseUrl(properties.getPrometheus().getUrl())
                 .build();
+        this.serverRepo = serverRepo;
     }
 
     /**
      * Fetch current metrics for a specific game server from Prometheus.
      */
     public ServerMetricsResponse getServerMetrics(String serverId) {
+        String k8sServerId = serverRepo.findById(serverId)
+                .map(GameServer::getServerId)
+                .orElse(serverId);
+
         try {
-            int playersOnline = queryPrometheusGauge("game_players_online", serverId);
-            int maxPlayers = queryPrometheusGauge("game_max_players", serverId);
-            double tps = queryPrometheusDouble("game_tps", serverId);
-            long memoryUsed = queryPrometheusLong("game_memory_used_bytes", serverId);
-            long memoryMax = queryPrometheusLong("game_memory_max_bytes", serverId);
-            long uptime = queryPrometheusLong("game_uptime_seconds", serverId);
+            int playersOnline = queryPrometheusGauge("game_players_online", k8sServerId);
+            int maxPlayers = queryPrometheusGauge("game_max_players", k8sServerId);
+            double tps = queryPrometheusDouble("game_tps", k8sServerId);
+            long memoryUsed = queryPrometheusLong("game_memory_used_bytes", k8sServerId);
+            long memoryMax = queryPrometheusLong("game_memory_max_bytes", k8sServerId);
+            long uptime = queryPrometheusLong("game_uptime_seconds", k8sServerId);
 
             return ServerMetricsResponse.builder()
-                    .serverId(serverId)
+                    .serverId(serverId) // Keep returning the requested ID (e.g. DB ID) for frontend query key
                     .playersOnline(playersOnline)
                     .maxPlayers(maxPlayers)
                     .tps(tps)

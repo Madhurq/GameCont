@@ -242,8 +242,9 @@ public class GameServerManager {
     // ═══ Helpers ════════════════════════════════════════════
 
     private GameServer getOwnedServer(String serverId, User owner) {
-        GameServer server = serverRepo.findByServerId(serverId)
-                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId));
+        GameServer server = serverRepo.findById(serverId)
+                .orElseGet(() -> serverRepo.findByServerId(serverId)
+                .orElseThrow(() -> new IllegalArgumentException("Server not found: " + serverId)));
 
         if (!server.getOwner().getId().equals(owner.getId())) {
             throw new SecurityException("You do not own this server");

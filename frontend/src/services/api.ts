@@ -1,85 +1,229 @@
-import type { GameServer, ServerMetrics, CreateServerRequest } from '../types';
+import type { GameServer, ServerMetrics, CreateServerRequest, AuthResponse, LoginRequest, RegisterRequest } from '../types';
 import { mockServers, generateMockMetrics, generateMockLogs } from './mockData';
+
+// ─── Config ───────────────────────────────────────────────────────────
+const API_BASE = 'http://localhost:8080/api';
+
+/** Whether we've detected the backend is unreachable. */
+let _offlineDetected = false;
+
+/** The user can opt into simulator mode manually. */
+let _simulatorMode = false;
+
+export function isSimulatorMode(): boolean {
+  return _simulatorMode || _offlineDetected;
+}
+
+export function setSimulatorMode(v: boolean): void {
+  _simulatorMode = v;
+}
+
+export function isOfflineDetected(): boolean {
+  return _offlineDetected;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+function getToken(): string | null {
+  return localStorage.getItem('token');
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: { ...authHeaders(), ...(init?.headers || {}) },
+    });
+
+    // Reset offline flag on successful contact
+    _offlineDetected = false;
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(body || `HTTP ${res.status}`);
+    }
+
+    return res.json();
+  } catch (err: any) {
+    // Network errors (CORS, refused, timeout) → mark offline
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      _offlineDetected = true;
+      throw new Error('BACKEND_OFFLINE');
+    }
+    throw err;
+  }
+}
 
 function delay(ms = 600): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// ─── Auth (always attempts real API first) ────────────────────────────
+export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
+  if (isSimulatorMode()) {
+    await delay(800);
+    return {
+      token: 'sim-jwt-' + Date.now(),
+      userId: 'sim-user-1',
+      username: data.email.split('@')[0],
+      email: data.email,
+    };
+  }
+  return apiFetch<AuthResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function registerUser(data: RegisterRequest): Promise<AuthResponse> {
+  if (isSimulatorMode()) {
+    await delay(1000);
+    return {
+      token: 'sim-jwt-' + Date.now(),
+      userId: 'sim-user-1',
+      username: data.username,
+      email: data.email,
+    };
+  }
+  return apiFetch<AuthResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Servers ──────────────────────────────────────────────────────────
 export async function fetchServers(): Promise<GameServer[]> {
-  await delay();
-  return [...mockServers];
+  if (isSimulatorMode()) {
+    await delay();
+    return [...mockServers];
+  }
+  return apiFetch<GameServer[]>('/servers');
 }
 
 export async function fetchServer(id: string): Promise<GameServer> {
-  await delay(300);
-  const server = mockServers.find((s) => s.id === id);
-  if (!server) throw new Error('Server not found');
-  return { ...server };
+  if (isSimulatorMode()) {
+    await delay(300);
+    const server = mockServers.find((s) => s.id === id);
+    if (!server) throw new Error('Server not found');
+    return { ...server };
+  }
+  return apiFetch<GameServer>(`/servers/${id}`);
 }
 
 export async function createServer(data: CreateServerRequest): Promise<GameServer> {
-  await delay(1200);
-  const newServer: GameServer = {
-    id: String(Date.now()),
-    serverId: `gs-${Math.random().toString(36).slice(2, 10)}`,
-    name: data.name,
-    gameType: data.gameType,
-    status: 'STARTING',
-    maxPlayers: data.maxPlayers,
-    region: data.region,
-    cpuLimit: data.cpuLimit,
-    memoryLimit: data.memoryLimit,
-    storageGb: data.storageGb,
-    connectAddress: null,
-    gamePort: 25565,
-    nodePort: null,
-    ownerId: 'user-1',
-    ownerUsername: 'admin',
-    createdAt: new Date().toISOString(),
-    lastActiveAt: new Date().toISOString(),
-  };
-  return newServer;
+  if (isSimulatorMode()) {
+    await delay(1200);
+    const newServer: GameServer = {
+      id: String(Date.now()),
+      serverId: `gs-${Math.random().toString(36).slice(2, 10)}`,
+      name: data.name,
+      gameType: data.gameType,
+      status: 'STARTING',
+      maxPlayers: data.maxPlayers,
+      region: data.region,
+      cpuLimit: data.cpuLimit,
+      memoryLimit: data.memoryLimit,
+      storageGb: data.storageGb,
+      connectAddress: null,
+      gamePort: 25565,
+      nodePort: null,
+      ownerId: 'sim-user-1',
+      ownerUsername: 'simulator',
+      createdAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+    };
+    mockServers.push(newServer);
+    return newServer;
+  }
+  return apiFetch<GameServer>('/servers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function fetchMetrics(serverId: string): Promise<ServerMetrics> {
-  await delay(200);
-  return generateMockMetrics(serverId);
+  if (isSimulatorMode()) {
+    await delay(200);
+    return generateMockMetrics(serverId);
+  }
+  return apiFetch<ServerMetrics>(`/servers/${serverId}/metrics`);
 }
 
 export async function startServer(id: string): Promise<GameServer> {
-  await delay(1500);
-  const server = mockServers.find((s) => s.id === id);
-  if (!server) throw new Error('Server not found');
-  server.status = 'STARTING';
-  await delay(2000);
-  server.status = 'RUNNING';
-  server.connectAddress = `gamecont.io:${30000 + Math.floor(Math.random() * 1000)}`;
-  return { ...server };
+  if (isSimulatorMode()) {
+    await delay(1500);
+    const server = mockServers.find((s) => s.id === id);
+    if (!server) throw new Error('Server not found');
+    server.status = 'STARTING';
+    await delay(2000);
+    server.status = 'RUNNING';
+    server.connectAddress = `gamecont.io:${30000 + Math.floor(Math.random() * 1000)}`;
+    return { ...server };
+  }
+  return apiFetch<GameServer>(`/servers/${id}/start`, { method: 'POST' });
 }
 
 export async function stopServer(id: string): Promise<GameServer> {
-  await delay(800);
-  const server = mockServers.find((s) => s.id === id);
-  if (!server) throw new Error('Server not found');
-  server.status = 'STOPPING';
-  await delay(1500);
-  server.status = 'STOPPED';
-  server.connectAddress = null;
-  return { ...server };
+  if (isSimulatorMode()) {
+    await delay(800);
+    const server = mockServers.find((s) => s.id === id);
+    if (!server) throw new Error('Server not found');
+    server.status = 'STOPPING';
+    await delay(1500);
+    server.status = 'STOPPED';
+    server.connectAddress = null;
+    return { ...server };
+  }
+  return apiFetch<GameServer>(`/servers/${id}/stop`, { method: 'POST' });
 }
 
 export async function restartServer(id: string): Promise<GameServer> {
-  await delay(500);
-  const server = mockServers.find((s) => s.id === id);
-  if (!server) throw new Error('Server not found');
-  server.status = 'STOPPING';
-  await delay(1500);
-  server.status = 'STARTING';
-  await delay(2000);
-  server.status = 'RUNNING';
-  return { ...server };
+  if (isSimulatorMode()) {
+    await delay(500);
+    const server = mockServers.find((s) => s.id === id);
+    if (!server) throw new Error('Server not found');
+    server.status = 'STOPPING';
+    await delay(1500);
+    server.status = 'STARTING';
+    await delay(2000);
+    server.status = 'RUNNING';
+    return { ...server };
+  }
+  return apiFetch<GameServer>(`/servers/${id}/restart`, { method: 'POST' });
 }
 
+export async function deleteServer(id: string): Promise<void> {
+  if (isSimulatorMode()) {
+    await delay(600);
+    const idx = mockServers.findIndex((s) => s.id === id);
+    if (idx >= 0) mockServers.splice(idx, 1);
+    return;
+  }
+  await apiFetch<void>(`/servers/${id}`, { method: 'DELETE' });
+}
+
+/** Ping the backend to check connectivity — used by the offline banner. */
+export async function pingBackend(): Promise<boolean> {
+  try {
+    await fetch(`${API_BASE.replace('/api', '')}/swagger-ui.html`, {
+      method: 'HEAD',
+      mode: 'no-cors',
+    });
+    _offlineDetected = false;
+    return true;
+  } catch {
+    _offlineDetected = true;
+    return false;
+  }
+}
+
+// Legacy compat — the mock logs helper
 export function getConsoleLogs() {
   return generateMockLogs();
 }

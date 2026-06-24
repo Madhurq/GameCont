@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { loginUser, setSimulatorMode } from '../services/api';
 import { Button } from '../components/Button/Button';
 import { Input } from '../components/Input/Input';
 import { Card } from '../components/Card/Card';
@@ -14,6 +15,7 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [touched, setTouched] = useState({ email: false, password: false });
+  const [showOffline, setShowOffline] = useState(false);
 
   const emailError = touched.email && !email ? 'Email is required' : '';
   const passwordError = touched.password && !password ? 'Password is required' : '';
@@ -27,26 +29,66 @@ export function Login() {
       return;
     }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    login('mock-jwt-token', 'user-1', email.split('@')[0], email);
-    navigate('/');
+    try {
+      const res = await loginUser({ email, password });
+      login(res.token, res.userId, res.username, res.email);
+      navigate('/dashboard');
+    } catch (err: any) {
+      if (err.message === 'BACKEND_OFFLINE') {
+        setShowOffline(true);
+        setError('Backend server is offline');
+      } else {
+        setError(err.message || 'Invalid credentials');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSimulator = () => {
+    setSimulatorMode(true);
+    login('sim-jwt-' + Date.now(), 'sim-user-1', email.split('@')[0] || 'operator', email || 'operator@gamecont.local');
+    navigate('/dashboard');
   };
 
   return (
     <div className={styles.page}>
       <div className={styles.bgGlow} />
       <div className={styles.bgGlow2} />
-      <Card variant="glass" padding="lg" className={styles.card}>
+
+      {/* Ambient scan line */}
+      <div className={styles.scanLine} />
+
+      <Card variant="glass" padding="lg" className={`${styles.card} cyber-frame`}>
         <div className={styles.header}>
           <span className={styles.logo}>◈</span>
-          <h1 className={styles.title}>Welcome back</h1>
-          <p className={styles.subtitle}>Sign in to manage your game servers</p>
+          <h1 className={styles.title}>
+            <span className={styles.titlePrefix}>&gt; </span>
+            Access Terminal
+          </h1>
+          <p className={styles.subtitle}>
+            <span className={styles.blinkDot} />
+            Authenticate to control your servers
+          </p>
         </div>
+
+        {showOffline && (
+          <div className="simulator-banner">
+            <span className="sim-icon">⚡</span>
+            <div className="sim-text">
+              <span className="sim-label">Backend Offline</span> — Server at localhost:8080 is unreachable.
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleSimulator}>
+              Enter Simulator
+            </Button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <Input
             label="Email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="operator@gamecont.io"
             value={email}
             error={emailError}
             onChange={(e) => setEmail(e.target.value)}
@@ -61,13 +103,13 @@ export function Login() {
             onChange={(e) => setPassword(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
           />
-          {error && <span className={styles.error}>{error}</span>}
+          {error && <span className={styles.error}>[ERR] {error}</span>}
           <Button type="submit" fullWidth loading={loading}>
-            Sign In
+            <span className={styles.btnText}>&gt; Authenticate</span>
           </Button>
         </form>
         <p className={styles.footer}>
-          Don't have an account? <Link to="/register">Create one</Link>
+          No account? <Link to="/register">&gt; Create one</Link>
         </p>
       </Card>
     </div>
