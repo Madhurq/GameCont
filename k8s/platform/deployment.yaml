@@ -1,0 +1,146 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Platform API Deployment
+# ═══════════════════════════════════════════════════════════════
+# Deploys the Spring Boot platform API to the gamecont-platform namespace.
+# Runs as a single replica on Free Tier (scale up by increasing replicas).
+#
+# ⚠️ The pod needs a ServiceAccount with RBAC permissions to
+#    create/read/delete Deployments, Services, PVCs, and ConfigMaps
+#    in the gamecont-servers namespace.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gamecont-api
+  namespace: gamecont-platform
+  labels:
+    app: gamecont
+    component: api
+
+---
+# RBAC — let the platform API manage game server K8s resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gamecont-api-role
+  labels:
+    app: gamecont
+rules:
+  # Game server lifecycle management
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "configmaps", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Pod log streaming
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  # Node info (for external IP resolution)
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+  # Namespace management
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gamecont-api-binding
+  labels:
+    app: gamecont
+subjects:
+  - kind: ServiceAccount
+    name: gamecont-api
+    namespace: gamecont-platform
+roleRef:
+  kind: ClusterRole
+  name: gamecont-api-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gamecont-api
+  namespace: gamecont-platform
+  labels:
+    app: gamecont
+    component: api
+spec:
+  replicas: 1  # Single replica for Free Tier
+  selector:
+    matchLabels:
+      app: gamecont
+      component: api
+  template:
+    metadata:
+      labels:
+        app: gamecont
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: gamecont-api
+      containers:
+        - name: api
+          image: ghcr.io/gamecont/platform-api:latest
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: gamecont-db-credentials
+                  key: host
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: gamecont-db-credentials
+                  key: port
+            - name: DB_NAME
+              value: "gamecont"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: gamecont-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gamecont-db-credentials
+                  key: password
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: gamecont-jwt
+                  key: secret
+            - name: PROMETHEUS_URL
+              value: "http://prometheus.gamecont-platform.svc.cluster.local:9090"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5

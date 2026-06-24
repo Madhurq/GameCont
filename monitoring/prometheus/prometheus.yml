@@ -1,0 +1,48 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Prometheus Production Config
+# ═══════════════════════════════════════════════════════════════
+# Used inside K3s (deployed via Ansible).
+# Scrapes: Platform API actuator + Game server metrics sidecars.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - '/etc/prometheus/alerts/*.yaml'
+
+scrape_configs:
+  # ── Platform API ──────────────────────────────────────────
+  # Scrapes Micrometer metrics from the Spring Boot actuator
+  - job_name: 'platform-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['gamecont-api.gamecont-platform.svc.cluster.local:8080']
+        labels:
+          component: 'api'
+
+  # ── Game Server Metrics Sidecars ──────────────────────────
+  # Auto-discovers game server pods via Kubernetes pod labels.
+  # Each game server pod has a metrics-exporter sidecar on :9090.
+  - job_name: 'game-servers'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - gamecont-servers
+    relabel_configs:
+      # Only scrape pods with prometheus.io/scrape annotation
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      # Use the prometheus.io/port annotation for the scrape port
+      - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: '(.+);(.+)'
+        replacement: '$1:$2'
+      # Add server_id label from pod label
+      - source_labels: [__meta_kubernetes_pod_label_server_id]
+        target_label: server_id
+      # Add pod name for debugging
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod

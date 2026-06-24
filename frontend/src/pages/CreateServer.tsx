@@ -5,6 +5,7 @@ import { createServer } from '../services/api';
 import { Button } from '../components/Button/Button';
 import { Input } from '../components/Input/Input';
 import { Card } from '../components/Card/Card';
+import { useToast } from '../hooks/useToast';
 import type { GameType, CreateServerRequest } from '../types';
 import styles from './CreateServer.module.css';
 
@@ -16,10 +17,33 @@ const gameTypes: { value: GameType; label: string; icon: string; desc: string }[
 
 const cpuOptions = ['250m', '500m', '1000m', '2000m', '4000m'];
 const memOptions = ['512Mi', '1024Mi', '2048Mi', '4096Mi', '8192Mi'];
-const regionOptions = ['us-east-1', 'us-west-2', 'eu-west-1', 'eu-central-1', 'ap-southeast-1'];
+const regionOptions = [
+  { value: 'us-east-1', label: 'US East (N. Virginia)' },
+  { value: 'us-west-2', label: 'US West (Oregon)' },
+  { value: 'eu-west-1', label: 'EU West (Ireland)' },
+  { value: 'eu-central-1', label: 'EU Central (Frankfurt)' },
+  { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore)' },
+];
+
+const cpuLabels: Record<string, string> = {
+  '250m': '0.25 vCPU',
+  '500m': '0.5 vCPU',
+  '1000m': '1 vCPU',
+  '2000m': '2 vCPU',
+  '4000m': '4 vCPU',
+};
+
+const memLabels: Record<string, string> = {
+  '512Mi': '512 MB',
+  '1024Mi': '1 GB',
+  '2048Mi': '2 GB',
+  '4096Mi': '4 GB',
+  '8192Mi': '8 GB',
+};
 
 export function CreateServer() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [name, setName] = useState('');
   const [gameType, setGameType] = useState<GameType>('MINECRAFT_VANILLA');
   const [maxPlayers, setMaxPlayers] = useState(10);
@@ -30,11 +54,21 @@ export function CreateServer() {
 
   const mutation = useMutation({
     mutationFn: (data: CreateServerRequest) => createServer(data),
-    onSuccess: () => navigate('/'),
+    onSuccess: () => {
+      toast('Server deployed successfully!', 'success');
+      navigate('/');
+    },
+    onError: () => {
+      toast('Failed to deploy server. Please try again.', 'error');
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name) {
+      toast('Please enter a server name', 'error');
+      return;
+    }
     mutation.mutate({
       name, gameType, maxPlayers, region, cpuLimit: cpu, memoryLimit: mem, storageGb: storage,
     });
@@ -49,7 +83,7 @@ export function CreateServer() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className={styles.form}>
+      <form onSubmit={handleSubmit} className={styles.form} noValidate>
         <Card variant="glass" padding="lg" className={styles.section}>
           <h2 className={styles.sectionTitle}>Game Type</h2>
           <div className={styles.gameGrid}>
@@ -95,15 +129,18 @@ export function CreateServer() {
           </div>
           <div className={styles.field}>
             <label className={styles.fieldLabel}>Region</label>
-            <select
-              className={styles.select}
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-            >
-              {regionOptions.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+            <div className={styles.selectWrapper}>
+              <select
+                className={styles.select}
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+              >
+                {regionOptions.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+              <span className={styles.selectArrow}>▼</span>
+            </div>
           </div>
         </Card>
 
@@ -111,31 +148,37 @@ export function CreateServer() {
           <h2 className={styles.sectionTitle}>Resources</h2>
           <div className={styles.resGrid}>
             <div className={styles.field}>
-              <label className={styles.fieldLabel}>CPU: {cpu}</label>
-              <select
-                className={styles.select}
-                value={cpu}
-                onChange={(e) => setCpu(e.target.value)}
-              >
-                {cpuOptions.map((o) => (
-                  <option key={o} value={o}>{o === '1000m' ? '1 vCPU' : o === '2000m' ? '2 vCPU' : o === '4000m' ? '4 vCPU' : o}</option>
-                ))}
-              </select>
+              <label className={styles.fieldLabel}>CPU</label>
+              <div className={styles.selectWrapper}>
+                <select
+                  className={styles.select}
+                  value={cpu}
+                  onChange={(e) => setCpu(e.target.value)}
+                >
+                  {cpuOptions.map((o) => (
+                    <option key={o} value={o}>{cpuLabels[o]}</option>
+                  ))}
+                </select>
+                <span className={styles.selectArrow}>▼</span>
+              </div>
             </div>
             <div className={styles.field}>
-              <label className={styles.fieldLabel}>Memory: {mem}</label>
-              <select
-                className={styles.select}
-                value={mem}
-                onChange={(e) => setMem(e.target.value)}
-              >
-                {memOptions.map((o) => (
-                  <option key={o} value={o}>{o}</option>
-                ))}
-              </select>
+              <label className={styles.fieldLabel}>Memory</label>
+              <div className={styles.selectWrapper}>
+                <select
+                  className={styles.select}
+                  value={mem}
+                  onChange={(e) => setMem(e.target.value)}
+                >
+                  {memOptions.map((o) => (
+                    <option key={o} value={o}>{memLabels[o]}</option>
+                  ))}
+                </select>
+                <span className={styles.selectArrow}>▼</span>
+              </div>
             </div>
             <div className={styles.field}>
-              <label className={styles.fieldLabel}>Storage: {storage}GB</label>
+              <label className={styles.fieldLabel}>Storage</label>
               <div className={styles.sliderRow}>
                 <input
                   type="range"

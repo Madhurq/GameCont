@@ -1,0 +1,22 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Kubernetes Namespaces
+# ═══════════════════════════════════════════════════════════════
+# Two namespaces isolate platform services from user game servers:
+#   - gamecont-platform: API, Prometheus, Redis
+#   - gamecont-servers:  User-created game server pods
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gamecont-platform
+  labels:
+    app: gamecont
+    tier: platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gamecont-servers
+  labels:
+    app: gamecont
+    tier: game-servers

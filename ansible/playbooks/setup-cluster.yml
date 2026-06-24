@@ -1,0 +1,107 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Cluster Setup Playbook
+# ═══════════════════════════════════════════════════════════════
+# Run after Terraform provisions the EC2 instance.
+# Sets up K3s, deploys the platform, and applies K8s manifests.
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml playbooks/setup-cluster.yml \
+#     -e k3s_public_ip=$(terraform -chdir=../terraform output -raw k3s_public_ip)
+---
+- name: Setup GameCont K3s Cluster
+  hosts: k3s-server
+  become: true
+
+  vars:
+    kubeconfig_path: /etc/rancher/k3s/k3s.yaml
+    ghcr_registry: ghcr.io/gamecont
+    db_host: "{{ rds_endpoint | default('localhost') }}"
+    db_password: "{{ vault_db_password | default('changeme') }}"
+    jwt_secret: "{{ vault_jwt_secret | default('changeme-production-secret-256-bits') }}"
+
+  tasks:
+    # ── Verify K3s is running ──────────────────────────────────
+    - name: Check K3s is installed and running
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: true
+
+    - name: Wait for K3s node to be ready
+      ansible.builtin.shell: kubectl get nodes --no-headers | grep -w Ready
+      register: node_status
+      retries: 30
+      delay: 10
+      until: node_status.rc == 0
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    # ── Apply K8s manifests ────────────────────────────────────
+    - name: Copy K8s manifests to server
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /opt/gamecont/k8s/
+        mode: '0644'
+      loop:
+        - ../../k8s/namespace.yaml
+        - ../../k8s/resource-quota.yaml
+        - ../../k8s/network-policy.yaml
+        - ../../k8s/platform/deployment.yaml
+        - ../../k8s/platform/service.yaml
+
+    - name: Apply namespaces
+      ansible.builtin.shell: kubectl apply -f /opt/gamecont/k8s/namespace.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    - name: Apply resource quotas
+      ansible.builtin.shell: kubectl apply -f /opt/gamecont/k8s/resource-quota.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    - name: Apply network policies
+      ansible.builtin.shell: kubectl apply -f /opt/gamecont/k8s/network-policy.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    # ── Create secrets ─────────────────────────────────────────
+    - name: Create database credentials secret
+      ansible.builtin.shell: |
+        kubectl create secret generic gamecont-db-credentials \
+          --namespace gamecont-platform \
+          --from-literal=host={{ db_host }} \
+          --from-literal=port=5432 \
+          --from-literal=username=gamecont \
+          --from-literal=password={{ db_password }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    - name: Create JWT secret
+      ansible.builtin.shell: |
+        kubectl create secret generic gamecont-jwt \
+          --namespace gamecont-platform \
+          --from-literal=secret={{ jwt_secret }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    # ── Deploy platform API ────────────────────────────────────
+    - name: Deploy platform API
+      ansible.builtin.shell: |
+        kubectl apply -f /opt/gamecont/k8s/platform/deployment.yaml
+        kubectl apply -f /opt/gamecont/k8s/platform/service.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    - name: Wait for platform API to be ready
+      ansible.builtin.shell: |
+        kubectl rollout status deployment/gamecont-api \
+          --namespace gamecont-platform \
+          --timeout=120s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    - name: Print platform API URL
+      ansible.builtin.debug:
+        msg: "GameCont API available at http://{{ ansible_host }}:30080"

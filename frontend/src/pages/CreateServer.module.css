@@ -143,9 +143,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+.selectWrapper {
+  position: relative;
+}
+
 .select {
   height: 44px;
-  padding: 0 var(--space-3);
+  width: 100%;
+  padding: 0 var(--space-8) 0 var(--space-3);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-default);
@@ -154,16 +159,29 @@
   font-family: var(--font-body);
   cursor: pointer;
   transition: all var(--transition-fast);
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .select:focus {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px var(--accent-primary-muted);
+  outline: none;
 }
 
 .select option {
   background: var(--bg-secondary);
   color: var(--text-primary);
+}
+
+.selectArrow {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 .resGrid {
@@ -176,6 +194,24 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
+}
+
+@media (max-width: 768px) {
+  .gameGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+
+  .resGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .title {
+    font-size: 1.35rem;
+  }
 }
 
 @keyframes fadeIn {

@@ -272,9 +272,6 @@ public class KubernetesService {
         log.info("Scaled Deployment {} to {} replicas", serverId, replicas);
     }
 
-    /**
-     * Wait for a Deployment to become ready (all pods running).
-     */
     public void waitForReady(String serverId, int timeoutSeconds) {
         try {
             kubeClient.apps().deployments()
@@ -282,9 +279,11 @@ public class KubernetesService {
                     .withName(serverId)
                     .waitUntilReady(timeoutSeconds, TimeUnit.SECONDS);
             log.info("Deployment {} is ready", serverId);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("Interrupted while waiting for Deployment {} to be ready", serverId);
+        } catch (Exception e) {
+            if (e instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
+                Thread.currentThread().interrupt();
+            }
+            log.warn("Error or interrupted while waiting for Deployment {} to be ready: {}", serverId, e.getMessage());
         }
     }
 
@@ -303,15 +302,24 @@ public class KubernetesService {
 
     // ═══ Log Streaming ══════════════════════════════════════
 
-    /**
-     * Get a log stream for a game server pod's main container.
-     * Used by the STOMP WebSocket log streaming feature.
-     */
     public InputStream getLogStream(String serverId) {
-        return kubeClient.apps().deployments()
+        var pods = kubeClient.pods()
                 .inNamespace(namespace)
-                .withName(serverId)
-                .getLog();  // Returns InputStream of current logs
+                .withLabel("server-id", serverId)
+                .list()
+                .getItems();
+
+        if (pods.isEmpty()) {
+            return InputStream.nullInputStream();
+        }
+
+        String podName = pods.get(0).getMetadata().getName();
+        String logs = kubeClient.pods()
+                .inNamespace(namespace)
+                .withName(podName)
+                .inContainer("game-server")
+                .getLog();
+        return new java.io.ByteArrayInputStream(logs.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     /**

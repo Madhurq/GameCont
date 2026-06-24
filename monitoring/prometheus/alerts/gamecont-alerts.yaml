@@ -1,0 +1,94 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Prometheus Alert Rules
+# ═══════════════════════════════════════════════════════════════
+# Alerts for game server health, platform stability, and
+# resource usage. Designed for AWS Free Tier constraints.
+groups:
+  # ── Game Server Health ───────────────────────────────────────
+  - name: gamecont-game-servers
+    rules:
+      # Alert if a game server's metrics sidecar is down for 5 minutes
+      - alert: GameServerMetricsDown
+        expr: up{job="game-servers"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Metrics sidecar down for server {{ $labels.server_id }}"
+          description: "The metrics exporter sidecar has been unreachable for 5 minutes."
+
+      # Alert if TPS drops below 15 (Minecraft: 20 TPS = healthy, <15 = laggy)
+      - alert: GameServerLowTPS
+        expr: game_tps{job="game-servers"} < 15
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low TPS on server {{ $labels.server_id }}: {{ $value }}"
+          description: "Server TPS has been below 15 for 2 minutes. Players will experience lag."
+
+      # Alert if memory usage exceeds 90% of the limit
+      - alert: GameServerHighMemory
+        expr: game_memory_used_bytes / game_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage on server {{ $labels.server_id }}: {{ $value | humanizePercentage }}"
+          description: "Game server memory usage exceeds 90%. Risk of OOMKill."
+
+      # Alert if query failures spike (sidecar can't reach game server)
+      - alert: GameServerQueryFailures
+        expr: rate(game_query_failures_total[5m]) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Frequent query failures on server {{ $labels.server_id }}"
+          description: "The metrics sidecar is failing to query the game server."
+
+  # ── Platform API Health ──────────────────────────────────────
+  - name: gamecont-platform
+    rules:
+      # Alert if the Platform API is down
+      - alert: PlatformAPIDown
+        expr: up{job="platform-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GameCont Platform API is DOWN"
+          description: "The Spring Boot API has been unreachable for 2 minutes."
+
+      # Alert if server provisioning failures increase
+      - alert: HighProvisioningFailures
+        expr: increase(gamecont_servers_provision_failed_total[30m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Multiple server provisioning failures"
+          description: "{{ $value }} provisioning failures in the last 30 minutes."
+
+      # Alert if JVM heap usage is high (t3.micro has limited RAM)
+      - alert: PlatformHighHeapUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Platform API heap usage at {{ $value | humanizePercentage }}"
+          description: "High JVM heap usage on the platform API. Consider increasing memory limits."
+
+  # ── Resource Constraints (Free Tier) ─────────────────────────
+  - name: gamecont-resources
+    rules:
+      # Alert if cluster node memory is low (t3.micro = 1 GB total)
+      - alert: NodeMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node memory critically low: {{ $value | humanizePercentage }} available"
+          description: "Less than 10% memory available. Scale to zero idle servers or upgrade instance type."

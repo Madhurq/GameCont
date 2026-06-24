@@ -12,6 +12,18 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .title {
   font-size: 0.8125rem;
   font-weight: 600;
@@ -38,26 +50,82 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
+.logCount {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pauseBtn {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.pauseBtn:hover {
+  background: var(--surface-card-hover);
+  color: var(--text-primary);
+}
+
+.pauseBtn.paused {
+  color: var(--warning);
+}
+
+.clearBtn {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.clearBtn:hover {
+  background: var(--surface-card-hover);
+  color: var(--text-primary);
+}
+
 .output {
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.6;
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
   background: rgba(0, 0, 0, 0.4);
   border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
+.empty {
+  color: var(--text-muted);
+  font-style: italic;
+  display: flex;
+  gap: 4px;
+}
+
 .line {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
   opacity: 0.9;
+  animation: lineIn 200ms ease;
+}
+
+.line:hover {
+  opacity: 1;
 }
 
 .timestamp {
   color: var(--text-muted);
   flex-shrink: 0;
+  user-select: none;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.level {
+  flex-shrink: 0;
+  font-weight: 600;
   user-select: none;
 }
 
@@ -73,6 +141,11 @@
   animation: blink 1s step-end infinite;
 }
 
+.blink {
+  animation: blink 1s step-end infinite;
+  color: var(--text-muted);
+}
+
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
@@ -81,4 +154,9 @@
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+@keyframes lineIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 0.9; transform: translateY(0); }
 }

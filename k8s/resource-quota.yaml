@@ -1,0 +1,62 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Resource Quotas for Game Server Namespace
+# ═══════════════════════════════════════════════════════════════
+# Caps total resources that ALL game servers can consume combined.
+# Prevents any single user (or bug) from exhausting the cluster.
+#
+# ⚠️ AWS Free Tier (t3.micro): 2 vCPU (burst), 1 GB RAM total.
+#    After K3s + platform API, ~600 MB RAM and 1 vCPU is left
+#    for game servers. These quotas reflect that constraint.
+#
+# Scaling beyond Free Tier: Increase these values when adding
+# worker nodes or upgrading to a larger instance type.
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: gamecont-servers-quota
+  namespace: gamecont-servers
+  labels:
+    app: gamecont
+spec:
+  hard:
+    # Compute limits for the entire namespace
+    requests.cpu: "1"           # 1 vCPU total across all game servers
+    requests.memory: "512Mi"    # 512 MB total requests
+    limits.cpu: "2"             # 2 vCPU burst total
+    limits.memory: "1Gi"        # 1 GB hard limit
+
+    # Storage limits
+    persistentvolumeclaims: "5" # Max 5 PVCs (world data volumes)
+    requests.storage: "10Gi"    # 10 GB total PVC storage
+
+    # Pod/Deployment limits
+    pods: "6"                   # Max 6 pods (3 game servers × 2 containers each)
+    count/deployments.apps: "3" # Max 3 Deployments (1 per game server)
+    count/services: "3"         # Max 3 NodePort Services
+
+---
+# LimitRange sets per-container defaults so users can't create
+# pods without resource requests (which bypasses the quota).
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: gamecont-servers-limits
+  namespace: gamecont-servers
+  labels:
+    app: gamecont
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "250m"
+        memory: "256Mi"
+      max:
+        cpu: "1"
+        memory: "1Gi"
+      min:
+        cpu: "50m"
+        memory: "32Mi"

@@ -1,0 +1,99 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Server Images CI Pipeline
+# ═══════════════════════════════════════════════════════════════
+# Builds game server Docker images and the metrics sidecar
+# when their source files change.
+name: CI — Server Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server-images/**'
+      - 'metrics-exporter/**'
+      - '.github/workflows/ci-server-images.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server-images/**'
+      - 'metrics-exporter/**'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-metrics-exporter:
+    name: Build Metrics Exporter
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push metrics exporter
+        uses: docker/build-push-action@v5
+        with:
+          context: metrics-exporter
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/gamecont-metrics-exporter:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/gamecont-metrics-exporter:${{ github.sha }}
+
+  build-minecraft-vanilla:
+    name: Build Minecraft Vanilla Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Minecraft vanilla image
+        uses: docker/build-push-action@v5
+        with:
+          context: server-images/minecraft-vanilla
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/gamecont-minecraft-vanilla:latest
+
+  build-minecraft-modded:
+    name: Build Minecraft Modded Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Minecraft modded image
+        uses: docker/build-push-action@v5
+        with:
+          context: server-images/minecraft-modded
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/gamecont-minecraft-modded:latest

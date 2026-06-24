@@ -36,10 +36,56 @@
   color: var(--text-muted);
 }
 
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.barLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 28px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.barTrack {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  transition: width var(--transition-base);
+}
+
+.barValue {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .footer {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  justify-content: space-between;
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-subtle);
 }
@@ -59,11 +105,4 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-secondary);
-}
-
-.devider {
-  width: 1px;
-  height: 12px;
-  background: var(--border-subtle);
-  display: block;
 }

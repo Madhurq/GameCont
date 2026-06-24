@@ -1,0 +1,87 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Network Policies for Multi-Tenant Isolation
+# ═══════════════════════════════════════════════════════════════
+# Enforces strict isolation between game servers:
+#   1. Game servers CANNOT communicate with each other
+#   2. Game servers CAN receive traffic from external players
+#   3. Game servers CAN be scraped by Prometheus (metrics sidecar)
+#   4. Game servers CAN reach DNS (kube-dns) for name resolution
+#
+# This prevents a compromised game server from attacking
+# other tenants' servers on the same cluster.
+---
+# Default deny all ingress traffic in the game servers namespace.
+# Each game server must explicitly allow traffic via the policies below.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-ingress
+  namespace: gamecont-servers
+  labels:
+    app: gamecont
+spec:
+  podSelector: {}  # Applies to ALL pods in this namespace
+  policyTypes:
+    - Ingress
+  ingress: []       # No ingress allowed by default
+
+---
+# Allow external players to connect to game server ports.
+# Game traffic comes through NodePort Services (port 25565, etc).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-game-traffic
+  namespace: gamecont-servers
+  labels:
+    app: gamecont
+spec:
+  podSelector:
+    matchLabels:
+      app: gamecont
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow game protocol traffic from anywhere (players join via NodePort)
+    - ports:
+        - port: 25565      # Minecraft default
+          protocol: TCP
+    # Allow Prometheus to scrape the metrics sidecar
+    - ports:
+        - port: 9090        # Metrics exporter port
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              tier: platform  # Only from gamecont-platform namespace
+
+---
+# Deny game server → game server (egress between pods in same namespace).
+# Game servers only need DNS + outbound internet (for downloading resources).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restrict-egress
+  namespace: gamecont-servers
+  labels:
+    app: gamecont
+spec:
+  podSelector:
+    matchLabels:
+      app: gamecont
+  policyTypes:
+    - Egress
+  egress:
+    # Allow DNS resolution
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Allow outbound internet (for Mojang auth, mod downloads, etc)
+    # but NOT to other pods in gamecont-servers namespace
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.42.0.0/16   # K3s default pod CIDR — blocks pod-to-pod

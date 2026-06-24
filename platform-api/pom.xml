@@ -68,11 +68,6 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
         </dependency>
-        <dependency>
-            <!-- Required for Flyway 10+ with PostgreSQL -->
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-        </dependency>
 
         <!-- ═══ Kubernetes Client (fabric8) ═══ -->
         <!-- Talks directly to the K8s API to create Deployments, Services, PVCs, etc. -->

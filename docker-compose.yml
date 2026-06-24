@@ -57,6 +57,25 @@ services:
       - '--storage.tsdb.retention.time=7d'
       - '--web.enable-lifecycle'
 
+  # ── Grafana ────────────────────────────────────────────────
+  # Displays platform-overview and server-detail dashboards.
+  # In production: runs in K3s.
+  grafana:
+    image: grafana/grafana:10.4.1
+    container_name: gamecont-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - PROMETHEUS_URL=http://prometheus:9090
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   prometheus_data:

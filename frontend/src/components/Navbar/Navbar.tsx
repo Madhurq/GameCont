@@ -10,24 +10,35 @@ export function Navbar() {
 
   if (!isAuthenticated) return null;
 
+  const initial = username ? username[0].toUpperCase() : '?';
+
   return (
     <nav className={`${styles.nav} glass`}>
       <div className={styles.inner}>
         <div className={styles.left}>
-          <a className={styles.logo} onClick={() => navigate('/')}>
+          <button className={styles.logo} onClick={() => navigate('/')} type="button">
             <span className={styles.logoIcon}>◈</span>
             <span className={styles.logoText}>GameCont</span>
-          </a>
+          </button>
           <div className={styles.links}>
-            <a
-              className={`${styles.link} ${location.pathname === '/' ? styles.active : ''}`}
+            <button
+              className={`${styles.link} ${location.pathname === '/' || location.pathname.startsWith('/servers') ? styles.active : ''}`}
               onClick={() => navigate('/')}
+              type="button"
             >
               Dashboard
-            </a>
+            </button>
+            <button
+              className={`${styles.link} ${location.pathname === '/servers/create' ? styles.active : ''}`}
+              onClick={() => navigate('/servers/create')}
+              type="button"
+            >
+              New Server
+            </button>
           </div>
         </div>
         <div className={styles.right}>
+          <span className={styles.avatar}>{initial}</span>
           <span className={styles.username}>{username}</span>
           <Button variant="ghost" size="sm" onClick={() => { logout(); navigate('/login'); }}>
             Logout

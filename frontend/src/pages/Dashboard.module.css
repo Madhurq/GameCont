@@ -52,15 +52,40 @@
   font-size: 0.875rem;
 }
 
+.errorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.errorIcon {
+  font-size: 2rem;
+}
+
 .empty {
+  position: relative;
   text-align: center;
   padding: var(--space-16) var(--space-6);
+  overflow: hidden;
+}
+
+.emptyGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 400px;
+  height: 400px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.06), transparent 70%);
+  pointer-events: none;
 }
 
 .emptyIcon {
   font-size: 3rem;
   display: block;
   margin-bottom: var(--space-4);
+  position: relative;
 }
 
 .emptyTitle {
@@ -68,12 +93,30 @@
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: var(--space-2);
+  position: relative;
 }
 
 .emptyText {
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin-bottom: var(--space-6);
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .title {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @keyframes fadeIn {

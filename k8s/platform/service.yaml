@@ -1,0 +1,32 @@
+# ═══════════════════════════════════════════════════════════════
+# GameCont — Platform API Service
+# ═══════════════════════════════════════════════════════════════
+# Exposes the Platform API to external traffic via NodePort.
+# On K3s with Traefik, you can alternatively use an IngressRoute.
+#
+# For production with a domain:
+#   - Use ClusterIP + Traefik IngressRoute instead of NodePort
+#   - Add TLS termination via cert-manager + Let's Encrypt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gamecont-api
+  namespace: gamecont-platform
+  labels:
+    app: gamecont
+    component: api
+spec:
+  type: NodePort
+  selector:
+    app: gamecont
+    component: api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080  # Accessible at http://<EC2_IP>:30080
+    - name: ws
+      port: 8080
+      targetPort: 8080
+      nodePort: 30081  # WebSocket on separate NodePort if needed

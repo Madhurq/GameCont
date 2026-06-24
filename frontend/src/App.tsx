@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Navbar } from './components/Navbar/Navbar';
 import { useAuthStore } from './store/authStore';
+import { ToastProvider } from './components/Toast/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { Landing } from './pages/Landing';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
@@ -9,7 +11,14 @@ import { Dashboard } from './pages/Dashboard';
 import { CreateServer } from './pages/CreateServer';
 import { ServerDetail } from './pages/ServerDetail';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -41,36 +50,40 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route
-            path="/login"
-            element={
-              <GuestGuard>
-                <Login />
-              </GuestGuard>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <GuestGuard>
-                <Register />
-              </GuestGuard>
-            }
-          />
-          <Route
-            path="/*"
-            element={
-              <AuthGuard>
-                <AppLayout />
-              </AuthGuard>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route
+                path="/login"
+                element={
+                  <GuestGuard>
+                    <Login />
+                  </GuestGuard>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <GuestGuard>
+                    <Register />
+                  </GuestGuard>
+                }
+              />
+              <Route
+                path="/*"
+                element={
+                  <AuthGuard>
+                    <AppLayout />
+                  </AuthGuard>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
