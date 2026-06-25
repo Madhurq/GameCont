@@ -56,7 +56,7 @@ export function CreateServer() {
     mutationFn: (data: CreateServerRequest) => createServer(data),
     onSuccess: () => {
       toast('Server deployed successfully!', 'success');
-      navigate('/');
+      navigate('/dashboard');
     },
     onError: () => {
       toast('Failed to deploy server. Please try again.', 'error');

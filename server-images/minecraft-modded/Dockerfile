@@ -21,7 +21,7 @@ ENV ENABLE_QUERY=true
 ENV QUERY_PORT=25565
 ENV ENABLE_RCON=true
 ENV RCON_PORT=25575
-ENV RCON_PASSWORD=gamecont_rcon
+# RCON password must be set via K8s environment variable at deployment time
 
 # Mods directory — mount via ConfigMap or PVC
 # Users can upload mods through the platform dashboard,

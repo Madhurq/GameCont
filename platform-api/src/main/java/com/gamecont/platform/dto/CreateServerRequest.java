@@ -28,11 +28,17 @@ public class CreateServerRequest {
     @Size(max = 20, message = "Region code too long")
     private String region;
 
-    // Resource limits — defaults are set in application.yml
+    @Pattern(regexp = "^\\d+(\\.\\d+)?(m|cpu)?$", message = "Invalid CPU limit format")
     private String cpuLimit;
+
+    @Pattern(regexp = "^\\d+(\\.\\d+)?(Mi|Gi|Ki|M|G|K)?$", message = "Invalid memory limit format")
     private String memoryLimit;
+
+    @Min(value = 1, message = "Minimum 1 GB storage")
+    @Max(value = 100, message = "Maximum 100 GB storage")
     private Integer storageGb;
 
-    /** Custom Docker image for CUSTOM game type */
+    @Pattern(regexp = "^(|[a-zA-Z0-9][a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+:[a-zA-Z0-9_.-]+)$",
+             message = "Invalid Docker image format")
     private String customImage;
 }

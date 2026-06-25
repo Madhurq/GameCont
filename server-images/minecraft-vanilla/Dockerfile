@@ -23,7 +23,7 @@ ENV ENABLE_QUERY=true
 ENV QUERY_PORT=25565
 ENV ENABLE_RCON=true
 ENV RCON_PORT=25575
-ENV RCON_PASSWORD=gamecont_rcon
+# RCON password must be set via K8s environment variable at deployment time
 
 # Health check: verify server is accepting connections
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \

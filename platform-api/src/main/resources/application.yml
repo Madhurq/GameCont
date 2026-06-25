@@ -39,6 +39,12 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  # ── File Upload Limits ────────────────────────────────────
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+
   # ── Jackson (JSON) ────────────────────────────────────────
   jackson:
     serialization:
@@ -67,6 +73,13 @@ gamecont:
     storage-gb: 2
     idle-timeout-minutes: 10
     max-servers-per-user: 3
+
+  # ── TCP Wake-on-Connect Proxy ─────────────────────────────
+  proxy:
+    enabled: ${PROXY_ENABLED:true}
+    port-start: ${PROXY_PORT_START:31000}
+    port-end: ${PROXY_PORT_END:31199}
+    wake-timeout-seconds: ${PROXY_WAKE_TIMEOUT:60}
 
   # ── Prometheus ────────────────────────────────────────────
   prometheus:

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Card } from '../Card/Card';
 import { setupWebSocket } from '../../services/websocket';
 import styles from './Console.module.css';
@@ -6,6 +6,8 @@ import styles from './Console.module.css';
 interface ConsoleProps {
   serverId: string;
   initialLogs?: string[];
+  onSendCommand?: (command: string) => void;
+  commandSending?: boolean;
 }
 
 interface LogEntry {
@@ -24,12 +26,14 @@ function formatTime(d: Date): string {
   return d.toLocaleTimeString();
 }
 
-export function Console({ serverId, initialLogs = [] }: ConsoleProps) {
+export function Console({ serverId, initialLogs = [], onSendCommand, commandSending }: ConsoleProps) {
   const [logs, setLogs] = useState<LogEntry[]>(
     initialLogs.map((text) => ({ text, time: formatTime(new Date()) }))
   );
   const [paused, setPaused] = useState(false);
+  const [command, setCommand] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const cleanup = setupWebSocket(serverId, (msg) => {
@@ -51,6 +55,35 @@ export function Console({ serverId, initialLogs = [] }: ConsoleProps) {
     }
     return { level: '', rest: line };
   };
+
+  const sendCommand = () => {
+    const trimmed = command.trim();
+    if (!trimmed || !onSendCommand || commandSending) return;
+    onSendCommand(trimmed);
+    setLogs((prev) => [...prev, { text: `> ${trimmed}`, time: formatTime(new Date()) }]);
+    setCommand('');
+  };
+
+  const handleCommand = (e: FormEvent) => {
+    e.preventDefault();
+    sendCommand();
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendCommand();
+    }
+  };
+
+  // Sync initialLogs prop changes once (prevents form reset on refetch)
+  const initialized = useRef(false);
+  useEffect(() => {
+    if (!initialized.current && initialLogs.length > 0) {
+      setLogs(initialLogs.map((text) => ({ text, time: formatTime(new Date()) })));
+      initialized.current = true;
+    }
+  }, [initialLogs]);
 
   return (
     <Card variant="glass" padding="sm" className={styles.console}>
@@ -98,6 +131,31 @@ export function Console({ serverId, initialLogs = [] }: ConsoleProps) {
         <div ref={bottomRef} />
         {logs.length > 0 && <span className={styles.cursor}>_</span>}
       </div>
+
+      {onSendCommand && (
+        <form className={styles.inputBar} onSubmit={handleCommand}>
+          <span className={styles.inputPrefix}>{'>'}</span>
+          <input
+            ref={inputRef}
+            className={styles.input}
+            type="text"
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            placeholder="Enter command..."
+            disabled={commandSending}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button
+            type="submit"
+            className={styles.sendBtn}
+            disabled={!command.trim() || commandSending}
+          >
+            {commandSending ? '...' : 'Send'}
+          </button>
+        </form>
+      )}
     </Card>
   );
 }

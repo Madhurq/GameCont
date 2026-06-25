@@ -188,7 +188,7 @@
                     - containerPort: 3000
                   env:
                     - name: GF_SECURITY_ADMIN_PASSWORD
-                      value: "admin"
+                      value: "{{ lookup('env', 'GF_SECURITY_ADMIN_PASSWORD') | default('changeme', true) }}"
                     - name: GF_USERS_ALLOW_SIGN_UP
                       value: "false"
                     - name: PROMETHEUS_URL

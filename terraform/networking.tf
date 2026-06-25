@@ -25,17 +25,7 @@ resource "aws_subnet" "public" {
   }
 }
 
-# Second subnet for RDS (requires 2 AZs)
-resource "aws_subnet" "public_b" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.2.0/24"
-  availability_zone       = "${var.aws_region}b"
-  map_public_ip_on_launch = true
 
-  tags = {
-    Name = "${var.project_name}-public-subnet-b"
-  }
-}
 
 # ── Internet Gateway ─────────────────────────────────────────
 resource "aws_internet_gateway" "main" {
@@ -65,10 +55,7 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_route_table_association" "public_b" {
-  subnet_id      = aws_subnet.public_b.id
-  route_table_id = aws_route_table.public.id
-}
+
 
 # ── Security Group: K3s Server ────────────────────────────────
 resource "aws_security_group" "k3s" {
@@ -116,22 +103,4 @@ resource "aws_security_group" "k3s" {
   }
 }
 
-# ── Security Group: RDS ───────────────────────────────────────
-resource "aws_security_group" "rds" {
-  name        = "${var.project_name}-rds-sg"
-  description = "Security group for RDS PostgreSQL"
-  vpc_id      = aws_vpc.main.id
 
-  # PostgreSQL access only from K3s server
-  ingress {
-    description     = "PostgreSQL from K3s"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.k3s.id]
-  }
-
-  tags = {
-    Name = "${var.project_name}-rds-sg"
-  }
-}

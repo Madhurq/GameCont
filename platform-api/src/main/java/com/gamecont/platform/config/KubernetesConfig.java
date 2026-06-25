@@ -1,7 +1,5 @@
 package com.gamecont.platform.config;
 
-import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import org.slf4j.Logger;
@@ -31,15 +29,9 @@ public class KubernetesConfig {
                     client.getConfiguration().getMasterUrl());
             return client;
         } catch (Exception e) {
-            log.warn("Failed to initialize Kubernetes client. " +
-                     "K8s operations will fail until a cluster is available. Error: {}", e.getMessage());
-            // Return a client anyway — it will fail on actual API calls
-            // but won't prevent the application from starting (useful for local DB-only dev)
-            Config config = new ConfigBuilder()
-                    .withMasterUrl("https://localhost:6443")
-                    .withTrustCerts(true)
-                    .build();
-            return new KubernetesClientBuilder().withConfig(config).build();
+            log.error("Failed to initialize Kubernetes client. " +
+                      "Ensure the cluster is accessible and kubeconfig is correctly configured. Error: {}", e.getMessage());
+            throw new RuntimeException("Failed to initialize Kubernetes client", e);
         }
     }
 }

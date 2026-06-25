@@ -88,6 +88,10 @@ public class GameServer {
     @Column(name = "node_port")
     private Integer nodePort;
 
+    /** TCP proxy port for wake-on-connect. Players connect here. */
+    @Column(name = "proxy_port")
+    private Integer proxyPort;
+
     // ── Ownership ───────────────────────────────────────────
 
     @ManyToOne(fetch = FetchType.LAZY)

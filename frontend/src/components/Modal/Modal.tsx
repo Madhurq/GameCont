@@ -17,7 +17,8 @@ export function Modal({ open, onClose, title, children, maxWidth = 480 }: ModalP
     } else {
       document.body.style.overflow = '';
     }
-    return () => { document.body.style.overflow = ''; };
+    const prev = document.body.style.overflow;
+    return () => { document.body.style.overflow = prev; };
   }, [open]);
 
   if (!open) return null;

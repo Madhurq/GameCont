@@ -130,6 +130,12 @@
 .actions {
   display: flex;
   gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.actionSpacer {
+  flex: 1;
+  min-width: var(--space-2);
 }
 
 .metricsGrid {

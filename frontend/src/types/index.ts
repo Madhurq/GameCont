@@ -8,12 +8,6 @@ export type ServerStatus =
 
 export type GameType = 'MINECRAFT_VANILLA' | 'MINECRAFT_MODDED' | 'CUSTOM';
 
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-}
-
 export interface AuthResponse {
   token: string;
   userId: string;
@@ -46,6 +40,7 @@ export interface GameServer {
   connectAddress: string | null;
   gamePort: number;
   nodePort: number | null;
+  proxyPort: number | null;
   ownerId: string;
   ownerUsername: string;
   createdAt: string;
@@ -80,8 +75,13 @@ export interface ConsoleLogEntry {
   message: string;
 }
 
-export interface ServerStatusBadge {
-  label: string;
-  color: 'success' | 'warning' | 'error' | 'info' | 'neutral';
-  animate: boolean;
+export interface FriendshipResponse {
+  id: string;
+  friendId: string;
+  friendUsername: string;
+  friendEmail: string;
+  status: 'PENDING' | 'ACCEPTED';
+  direction: 'SENT' | 'RECEIVED' | null;
+  createdAt: string;
 }
+

@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Navbar } from './components/Navbar/Navbar';
@@ -10,6 +11,12 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { CreateServer } from './pages/CreateServer';
 import { ServerDetail } from './pages/ServerDetail';
+import { EditServer } from './pages/EditServer';
+import { FileManager } from './pages/FileManager';
+import { Friends } from './pages/Friends';
+
+// Hydrate auth store on startup
+useAuthStore.getState().hydrate();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,8 +46,11 @@ function AppLayout() {
       <main>
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/friends" element={<Friends />} />
           <Route path="/servers/create" element={<CreateServer />} />
           <Route path="/servers/:id" element={<ServerDetail />} />
+          <Route path="/servers/:id/edit" element={<EditServer />} />
+          <Route path="/servers/:id/files" element={<FileManager />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>

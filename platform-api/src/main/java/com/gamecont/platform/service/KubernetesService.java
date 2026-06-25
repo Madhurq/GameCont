@@ -6,10 +6,12 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -491,6 +493,78 @@ public class KubernetesService {
         log.info("Deleted all K8s resources for server: {}", serverId);
     }
 
+    // ═══ Exec Commands ═════════════════════════════════════
+
+    /**
+     * Execute a command inside the game-server container of a running pod.
+     * Returns the stdout output as a string.
+     */
+    public String execCommand(String serverId, String command) {
+        try {
+            var pods = kubeClient.pods()
+                    .inNamespace(namespace)
+                    .withLabel("server-id", serverId)
+                    .list()
+                    .getItems();
+
+            if (pods.isEmpty()) {
+                log.warn("No pods found for server {} to exec command", serverId);
+                return "";
+            }
+
+            String podName = pods.get(0).getMetadata().getName();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+            kubeClient.pods()
+                    .inNamespace(namespace)
+                    .withName(podName)
+                    .inContainer("game-server")
+                    .writingOutput(out)
+                    .writingError(err)
+                    .exec("sh", "-c", command);
+
+            if (err.size() > 0) {
+                log.debug("Exec stderr for {}: {}", serverId, err);
+            }
+
+            return out.toString(java.nio.charset.StandardCharsets.UTF_8).trim();
+        } catch (Exception e) {
+            log.warn("[MOCK K8S] execCommand: K8s cluster not available, mocking exec. Error: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * Execute a command on the game-server container with input piped to stdin.
+     * Used for uploading file content.
+     */
+    public void execCommandWithInput(String serverId, String command, byte[] input) {
+        try {
+            var pods = kubeClient.pods()
+                    .inNamespace(namespace)
+                    .withLabel("server-id", serverId)
+                    .list()
+                    .getItems();
+
+            if (pods.isEmpty()) {
+                log.warn("No pods found for server {} to exec command with input", serverId);
+                return;
+            }
+
+            String podName = pods.get(0).getMetadata().getName();
+
+            kubeClient.pods()
+                    .inNamespace(namespace)
+                    .withName(podName)
+                    .inContainer("game-server")
+                    .readingInput(new java.io.ByteArrayInputStream(input))
+                    .exec("sh", "-c", command);
+        } catch (Exception e) {
+            log.warn("[MOCK K8S] execCommandWithInput: K8s cluster not available, mocking. Error: {}", e.getMessage());
+        }
+    }
+
     // ═══ Helpers ════════════════════════════════════════════
 
     private Map<String, String> serverLabels(String serverId) {
@@ -505,6 +579,14 @@ public class KubernetesService {
      * Get the external IP of a K8s node (for building connect addresses).
      * On K3s single-node, this is the EC2 public IP.
      */
+    @PreDestroy
+    public void cleanup() {
+        if (kubeClient != null) {
+            kubeClient.close();
+            log.info("Kubernetes client closed");
+        }
+    }
+
     public String getNodeExternalIp() {
         try {
             var nodes = kubeClient.nodes().list().getItems();

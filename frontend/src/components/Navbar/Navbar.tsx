@@ -16,7 +16,7 @@ export function Navbar() {
     <nav className={`${styles.nav} glass`}>
       <div className={styles.inner}>
         <div className={styles.left}>
-          <button className={styles.logo} onClick={() => navigate('/')} type="button">
+          <button className={styles.logo} onClick={() => navigate('/dashboard')} type="button">
             <span className={styles.logoIcon}>◈</span>
             <span className={styles.logoText}>GameCont</span>
           </button>
@@ -27,6 +27,13 @@ export function Navbar() {
               type="button"
             >
               Dashboard
+            </button>
+            <button
+              className={`${styles.link} ${location.pathname === '/friends' ? styles.active : ''}`}
+              onClick={() => navigate('/friends')}
+              type="button"
+            >
+              Friends
             </button>
             <button
               className={`${styles.link} ${location.pathname === '/servers/create' ? styles.active : ''}`}

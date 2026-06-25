@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { fetchServer } from '../services/api';
-import { isSimulatorMode } from '../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchServer, deleteServer, isSimulatorMode } from '../services/api';
 import { useMetricsPolling } from '../hooks/useMetricsPolling';
 import { useServerActions } from '../hooks/useServerActions';
 import { useToast } from '../hooks/useToast';
@@ -28,9 +27,10 @@ const statusBadgeVariant: Record<string, 'success' | 'warning' | 'error' | 'info
 export function ServerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { actionLoading, start, stop, restart } = useServerActions(id!);
-  const [confirmAction, setConfirmAction] = useState<'stop' | 'restart' | null>(null);
+  const { actionLoading, commandSending, start, stop, restart, remove, send } = useServerActions(id!);
+  const [confirmAction, setConfirmAction] = useState<'stop' | 'restart' | 'delete' | null>(null);
   const [copied, setCopied] = useState(false);
 
   const { data: server, isLoading, error } = useQuery({
@@ -60,10 +60,26 @@ export function ServerDetail() {
     toast('Server started successfully', 'success');
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteServer(id!),
+    onSuccess: () => {
+      toast('Server deleted successfully', 'success');
+      queryClient.invalidateQueries({ queryKey: ['servers'] });
+      navigate('/dashboard');
+    },
+    onError: () => {
+      toast('Failed to delete server', 'error');
+      setConfirmAction(null);
+    },
+  });
+
   const handleConfirm = async () => {
     if (confirmAction === 'stop') await handleStop();
     else if (confirmAction === 'restart') await handleRestart();
+    else if (confirmAction === 'delete') deleteMutation.mutate();
   };
+
+  const canSendCommand = server?.status === 'RUNNING';
 
   const handleCopy = async () => {
     if (server?.connectAddress) {
@@ -105,11 +121,13 @@ export function ServerDetail() {
 
       <ConfirmModal
         open={!!confirmAction}
-        title={confirmAction === 'stop' ? 'Stop' : 'Restart'}
-        message="This action will temporarily disconnect all players. Are you sure you want to proceed?"
-        confirmLabel={confirmAction === 'stop' ? 'Stop' : 'Restart'}
+        title={confirmAction === 'delete' ? 'Delete Server' : confirmAction === 'stop' ? 'Stop' : 'Restart'}
+        message={confirmAction === 'delete'
+          ? 'This will permanently delete the server and ALL its data (world saves, config, mods). This action cannot be undone!'
+          : 'This action will temporarily disconnect all players. Are you sure you want to proceed?'}
+        confirmLabel={confirmAction === 'delete' ? 'Delete Forever' : confirmAction === 'stop' ? 'Stop' : 'Restart'}
         confirmVariant="danger"
-        loading={!!confirmAction && actionLoading === confirmAction}
+        loading={confirmAction === 'delete' ? deleteMutation.isPending : (!!confirmAction && actionLoading === confirmAction)}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmAction(null)}
       />
@@ -174,6 +192,16 @@ export function ServerDetail() {
         {server.status === 'STARTING' && (
           <span className={styles.startingNote}>Initializing server instance...</span>
         )}
+        <div className={styles.actionSpacer} />
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/servers/${id}/edit`)}>
+          &gt; Edit
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/servers/${id}/files`)}>
+          &gt; Files
+        </Button>
+        <Button variant="danger" size="sm" onClick={() => setConfirmAction('delete')}>
+          &gt; Delete
+        </Button>
       </div>
 
       <div className={styles.metricsGrid}>
@@ -212,7 +240,7 @@ export function ServerDetail() {
       </div>
 
       {server.status !== 'STOPPED' && server.status !== 'ERROR' && (
-        <Console serverId={server.id} />
+        <Console serverId={server.id} onSendCommand={canSendCommand ? send : undefined} commandSending={commandSending} />
       )}
     </div>
   );

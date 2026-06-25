@@ -1,8 +1,8 @@
-import type { GameServer, ServerMetrics, CreateServerRequest, AuthResponse, LoginRequest, RegisterRequest } from '../types';
-import { mockServers, generateMockMetrics, generateMockLogs } from './mockData';
+import type { GameServer, ServerMetrics, CreateServerRequest, AuthResponse, LoginRequest, RegisterRequest, FriendshipResponse } from '../types';
+import { mockServers, generateMockMetrics } from './mockData';
 
 // ─── Config ───────────────────────────────────────────────────────────
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 /** Whether we've detected the backend is unreachable. */
 let _offlineDetected = false;
@@ -11,7 +11,7 @@ let _offlineDetected = false;
 let _simulatorMode = false;
 
 export function isSimulatorMode(): boolean {
-  return _simulatorMode || _offlineDetected;
+  return _simulatorMode;
 }
 
 export function setSimulatorMode(v: boolean): void {
@@ -133,6 +133,7 @@ export async function createServer(data: CreateServerRequest): Promise<GameServe
       connectAddress: null,
       gamePort: 25565,
       nodePort: null,
+      proxyPort: null,
       ownerId: 'sim-user-1',
       ownerUsername: 'simulator',
       createdAt: new Date().toISOString(),
@@ -208,6 +209,100 @@ export async function deleteServer(id: string): Promise<void> {
   await apiFetch<void>(`/servers/${id}`, { method: 'DELETE' });
 }
 
+// ─── Console Commands ─────────────────────────────────────────────────
+export async function sendCommand(serverId: string, command: string): Promise<void> {
+  if (isSimulatorMode()) {
+    await delay(200);
+    return;
+  }
+  await apiFetch<void>(`/servers/${serverId}/command`, {
+    method: 'POST',
+    body: JSON.stringify({ command }),
+  });
+}
+
+// ─── Server Updates ───────────────────────────────────────────────────
+export async function updateServer(id: string, data: Partial<CreateServerRequest>): Promise<GameServer> {
+  if (isSimulatorMode()) {
+    await delay(600);
+    const server = mockServers.find((s) => s.id === id);
+    if (!server) throw new Error('Server not found');
+    Object.assign(server, data);
+    return { ...server };
+  }
+  return apiFetch<GameServer>(`/servers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── File Manager ─────────────────────────────────────────────────────
+export interface FileEntry {
+  name: string;
+  path: string;
+  size: number;
+  isDirectory: boolean;
+  lastModified: string;
+}
+
+export async function listFiles(serverId: string, path: string): Promise<FileEntry[]> {
+  if (isSimulatorMode()) {
+    await delay(300);
+    return [
+      { name: 'world', path: '/data/world', size: 0, isDirectory: true, lastModified: new Date().toISOString() },
+      { name: 'server.properties', path: '/data/server.properties', size: 2048, isDirectory: false, lastModified: new Date().toISOString() },
+      { name: 'logs', path: '/data/logs', size: 0, isDirectory: true, lastModified: new Date().toISOString() },
+      { name: 'mods', path: '/data/mods', size: 0, isDirectory: true, lastModified: new Date().toISOString() },
+      { name: 'banned-players.json', path: '/data/banned-players.json', size: 128, isDirectory: false, lastModified: new Date().toISOString() },
+    ];
+  }
+  return apiFetch<FileEntry[]>(`/servers/${serverId}/files?path=${encodeURIComponent(path)}`);
+}
+
+export async function readFile(serverId: string, path: string): Promise<string> {
+  if (isSimulatorMode()) {
+    await delay(200);
+    return '# Simulated file content\n';
+  }
+  const res = await apiFetch<{ content: string }>(`/servers/${serverId}/files/read?path=${encodeURIComponent(path)}`);
+  return res.content;
+}
+
+export async function writeFile(serverId: string, path: string, content: string): Promise<void> {
+  if (isSimulatorMode()) {
+    await delay(400);
+    return;
+  }
+  await apiFetch<void>(`/servers/${serverId}/files/write`, {
+    method: 'POST',
+    body: JSON.stringify({ path, content }),
+  });
+}
+
+export async function deleteFilePath(serverId: string, path: string): Promise<void> {
+  if (isSimulatorMode()) {
+    await delay(300);
+    return;
+  }
+  await apiFetch<void>(`/servers/${serverId}/files?path=${encodeURIComponent(path)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function uploadFile(serverId: string, path: string, file: File): Promise<void> {
+  if (isSimulatorMode()) {
+    await delay(800);
+    return;
+  }
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('path', path);
+  await apiFetch<void>(`/servers/${serverId}/files/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
 /** Ping the backend to check connectivity — used by the offline banner. */
 export async function pingBackend(): Promise<boolean> {
   try {
@@ -223,7 +318,106 @@ export async function pingBackend(): Promise<boolean> {
   }
 }
 
-// Legacy compat — the mock logs helper
-export function getConsoleLogs() {
-  return generateMockLogs();
+// ─── Friends API ──────────────────────────────────────────────────────
+export async function sendFriendRequest(friendUsername: string): Promise<FriendshipResponse> {
+  if (isSimulatorMode()) {
+    await delay(600);
+    return {
+      id: String(Date.now()),
+      friendId: 'sim-user-friend',
+      friendUsername,
+      friendEmail: `${friendUsername}@example.com`,
+      status: 'PENDING',
+      direction: 'SENT',
+      createdAt: new Date().toISOString(),
+    };
+  }
+  return apiFetch<FriendshipResponse>('/friends/request', {
+    method: 'POST',
+    body: JSON.stringify({ friendUsername }),
+  });
 }
+
+export async function acceptFriendRequest(id: string): Promise<FriendshipResponse> {
+  if (isSimulatorMode()) {
+    await delay(400);
+    return {
+      id,
+      friendId: 'sim-user-friend',
+      friendUsername: 'friend_user',
+      friendEmail: 'friend@example.com',
+      status: 'ACCEPTED',
+      direction: null,
+      createdAt: new Date().toISOString(),
+    };
+  }
+  return apiFetch<FriendshipResponse>(`/friends/request/${id}/accept`, {
+    method: 'POST',
+  });
+}
+
+export async function declineFriendRequest(id: string): Promise<void> {
+  if (isSimulatorMode()) {
+    await delay(400);
+    return;
+  }
+  await apiFetch<void>(`/friends/request/${id}/decline`, {
+    method: 'POST',
+  });
+}
+
+export async function removeFriend(id: string): Promise<void> {
+  if (isSimulatorMode()) {
+    await delay(400);
+    return;
+  }
+  await apiFetch<void>(`/friends/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchFriends(): Promise<FriendshipResponse[]> {
+  if (isSimulatorMode()) {
+    await delay(300);
+    return [
+      {
+        id: 'sim-friendship-1',
+        friendId: 'sim-user-2',
+        friendUsername: 'notch',
+        friendEmail: 'notch@mojang.com',
+        status: 'ACCEPTED',
+        direction: null,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+  }
+  return apiFetch<FriendshipResponse[]>('/friends');
+}
+
+export async function fetchPendingRequests(): Promise<FriendshipResponse[]> {
+  if (isSimulatorMode()) {
+    await delay(300);
+    return [
+      {
+        id: 'sim-friendship-2',
+        friendId: 'sim-user-3',
+        friendUsername: 'jeb_',
+        friendEmail: 'jeb@mojang.com',
+        status: 'PENDING',
+        direction: 'RECEIVED',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'sim-friendship-3',
+        friendId: 'sim-user-4',
+        friendUsername: 'dinnerbone',
+        friendEmail: 'dbone@mojang.com',
+        status: 'PENDING',
+        direction: 'SENT',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+  }
+  return apiFetch<FriendshipResponse[]>('/friends/requests');
+}
+

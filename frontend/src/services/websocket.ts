@@ -1,8 +1,18 @@
-import { Client } from '@stomp/stompjs';
+import { Client, Subscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { isSimulatorMode } from './api';
 
-const WS_URL = 'http://localhost:8080/ws';
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws';
+const WS_RECONNECT_DELAY = parseInt(import.meta.env.VITE_WS_RECONNECT_DELAY || '5000', 10);
+const WS_MAX_RECONNECT_DELAY = parseInt(import.meta.env.VITE_WS_MAX_RECONNECT_DELAY || '30000', 10);
+
+function getToken(): string | null {
+  try {
+    return localStorage.getItem('token');
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Sets up a WebSocket connection to stream live console logs for a game server.
@@ -51,18 +61,28 @@ export function setupWebSocket(
 
   // ── Live Mode: STOMP over SockJS ────────────────────────────────
   let stopped = false;
+  let subscription: Subscription | null = null;
 
   const client = new Client({
     webSocketFactory: () => new SockJS(WS_URL) as any,
-    reconnectDelay: 5000,
+    connectHeaders: {
+      Authorization: `Bearer ${getToken()}`,
+    },
+    reconnectDelay: WS_RECONNECT_DELAY,
+    maxReconnectDelay: WS_MAX_RECONNECT_DELAY,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
 
     onConnect: () => {
       if (stopped) return;
 
+      // Unsubscribe previous subscription on reconnect to avoid duplicates
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+
       // Subscribe to live log topic
-      client.subscribe(`/topic/logs/${serverId}`, (message) => {
+      subscription = client.subscribe(`/topic/logs/${serverId}`, (message) => {
         try {
           const payload = JSON.parse(message.body);
           if (payload.error) {

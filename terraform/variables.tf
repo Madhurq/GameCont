@@ -15,26 +15,14 @@ variable "project_name" {
 }
 
 variable "instance_type" {
-  description = "EC2 instance type (t3.micro = Free Tier)"
+  description = "EC2 instance type (t3.small)"
   type        = string
-  default     = "t3.micro"
+  default     = "t3.small"
 }
 
 variable "key_name" {
   description = "Name of the EC2 key pair for SSH access"
   type        = string
-}
-
-variable "db_password" {
-  description = "PostgreSQL master password"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_username" {
-  description = "PostgreSQL master username"
-  type        = string
-  default     = "gamecont"
 }
 
 variable "my_ip" {

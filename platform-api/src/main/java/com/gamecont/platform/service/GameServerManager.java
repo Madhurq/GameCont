@@ -2,8 +2,11 @@ package com.gamecont.platform.service;
 
 import com.gamecont.platform.config.GameContProperties;
 import com.gamecont.platform.dto.CreateServerRequest;
+import com.gamecont.platform.dto.FileEntry;
 import com.gamecont.platform.dto.ServerResponse;
+import com.gamecont.platform.dto.UpdateServerRequest;
 import com.gamecont.platform.model.*;
+import com.gamecont.platform.proxy.TcpProxyServer;
 import com.gamecont.platform.repository.GameServerRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
@@ -12,7 +15,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,17 +46,24 @@ public class GameServerManager {
     private final AuditService auditService;
     private final GameContProperties properties;
     private final MeterRegistry meterRegistry;
+    private final TcpProxyServer proxyServer;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private GameServerManager self;
 
     public GameServerManager(GameServerRepository serverRepo,
                              KubernetesService kubeService,
                              AuditService auditService,
                              GameContProperties properties,
-                             MeterRegistry meterRegistry) {
+                             MeterRegistry meterRegistry,
+                             TcpProxyServer proxyServer) {
         this.serverRepo = serverRepo;
         this.kubeService = kubeService;
         this.auditService = auditService;
         this.properties = properties;
         this.meterRegistry = meterRegistry;
+        this.proxyServer = proxyServer;
     }
 
     /**
@@ -95,7 +109,7 @@ public class GameServerManager {
         server = serverRepo.save(server);
 
         // Kick off K8s provisioning asynchronously
-        provisionKubernetesResources(server, owner);
+        self.provisionKubernetesResources(server, owner);
 
         meterRegistry.counter("gamecont_servers_created").increment();
         auditService.log("SERVER_CREATED", serverId, owner.getId(),
@@ -137,8 +151,12 @@ public class GameServerManager {
             // 5. Create NodePort Service
             int nodePort = kubeService.createService(serverId, server.getGamePort());
 
-            // 6. Update DB with NodePort and status
+            // 6. Allocate TCP proxy port for wake-on-connect
+            int proxyPort = proxyServer.allocatePort(serverId);
+
+            // 7. Update DB with NodePort, proxy port, and status
             server.setNodePort(nodePort);
+            server.setProxyPort(proxyPort);
             server.setStatus(ServerStatus.RUNNING);
             serverRepo.save(server);
 
@@ -162,11 +180,11 @@ public class GameServerManager {
         GameServer server = getOwnedServer(serverId, owner);
         validateStatus(server, ServerStatus.RUNNING, ServerStatus.STARTING);
 
-        kubeService.scaleDeployment(serverId, 0);
+        kubeService.scaleDeployment(server.getServerId(), 0);
         server.setStatus(ServerStatus.STOPPED);
         serverRepo.save(server);
 
-        auditService.log("SERVER_STOPPED", serverId, owner.getId(), null);
+        auditService.log("SERVER_STOPPED", server.getServerId(), owner.getId(), null);
         return ServerResponse.fromEntity(server, kubeService.getNodeExternalIp());
     }
 
@@ -178,12 +196,12 @@ public class GameServerManager {
         GameServer server = getOwnedServer(serverId, owner);
         validateStatus(server, ServerStatus.STOPPED, ServerStatus.SLEEPING);
 
-        kubeService.scaleDeployment(serverId, 1);
+        kubeService.scaleDeployment(server.getServerId(), 1);
         server.setStatus(ServerStatus.STARTING);
         server.setLastActiveAt(Instant.now());
         serverRepo.save(server);
 
-        auditService.log("SERVER_STARTED", serverId, owner.getId(), null);
+        auditService.log("SERVER_STARTED", server.getServerId(), owner.getId(), null);
         return ServerResponse.fromEntity(server, kubeService.getNodeExternalIp());
     }
 
@@ -195,14 +213,13 @@ public class GameServerManager {
         GameServer server = getOwnedServer(serverId, owner);
         validateStatus(server, ServerStatus.RUNNING);
 
-        // Scale to 0 then back to 1
-        kubeService.scaleDeployment(serverId, 0);
-        kubeService.scaleDeployment(serverId, 1);
+        kubeService.scaleDeployment(server.getServerId(), 0);
+        kubeService.scaleDeployment(server.getServerId(), 1);
         server.setStatus(ServerStatus.STARTING);
         server.setLastActiveAt(Instant.now());
         serverRepo.save(server);
 
-        auditService.log("SERVER_RESTARTED", serverId, owner.getId(), null);
+        auditService.log("SERVER_RESTARTED", server.getServerId(), owner.getId(), null);
         return ServerResponse.fromEntity(server, kubeService.getNodeExternalIp());
     }
 
@@ -213,12 +230,15 @@ public class GameServerManager {
     public void deleteServer(String serverId, User owner) {
         GameServer server = getOwnedServer(serverId, owner);
 
-        kubeService.deleteServerResources(serverId);
+        if (server.getProxyPort() != null) {
+            proxyServer.freePort(server.getProxyPort());
+        }
+        kubeService.deleteServerResources(server.getServerId());
         serverRepo.delete(server);
 
         meterRegistry.counter("gamecont_servers_deleted").increment();
-        auditService.log("SERVER_DELETED", serverId, owner.getId(), null);
-        log.info("Server {} deleted by user {}", serverId, owner.getUsername());
+        auditService.log("SERVER_DELETED", server.getServerId(), owner.getId(), null);
+        log.info("Server {} deleted by user {}", server.getServerId(), owner.getUsername());
     }
 
     /**
@@ -226,9 +246,18 @@ public class GameServerManager {
      */
     public List<ServerResponse> getUserServers(User owner) {
         String hostIp = kubeService.getNodeExternalIp();
-        return serverRepo.findByOwnerId(owner.getId()).stream()
+        return serverRepo.findByOwnerIdWithOwner(owner.getId()).stream()
                 .map(s -> ServerResponse.fromEntity(s, hostIp))
                 .toList();
+    }
+
+    /**
+     * Lightweight ownership check — only loads the owner ID, not the full entity.
+     */
+    public boolean ownsServer(String serverId, String userId) {
+        return serverRepo.findOwnerIdById(serverId)
+                .map(ownerId -> ownerId.equals(userId))
+                .orElse(false);
     }
 
     /**
@@ -276,5 +305,152 @@ public class GameServerManager {
                 "game-type", server.getGameType().name(),
                 "server-id", server.getServerId()
         );
+    }
+
+    // ═══ Console Commands ══════════════════════════════════
+
+    /**
+     * Send a command to the game server console (via RCON or stdin).
+     */
+    @Transactional
+    public void sendCommand(String serverId, String command, User owner) {
+        GameServer server = getOwnedServer(serverId, owner);
+        validateStatus(server, ServerStatus.RUNNING);
+
+        String escaped = command.replace("'", "'\\''");
+        kubeService.execCommand(serverId, "rcon-cli '" + escaped + "'");
+
+        log.info("Command sent to server {}: {}", serverId, command);
+        auditService.log("SERVER_COMMAND", serverId, owner.getId(), "Command: " + command);
+    }
+
+    // ═══ Server Updates ════════════════════════════════════
+
+    /**
+     * Update a game server's configuration.
+     */
+    @Transactional
+    public ServerResponse updateServer(String serverId, UpdateServerRequest request, User owner) {
+        GameServer server = getOwnedServer(serverId, owner);
+
+        if (request.getName() != null) server.setName(request.getName());
+        if (request.getGameType() != null) server.setGameType(request.getGameType());
+        if (request.getMaxPlayers() != null) server.setMaxPlayers(request.getMaxPlayers());
+        if (request.getRegion() != null) server.setRegion(request.getRegion());
+        if (request.getCpuLimit() != null) server.setCpuLimit(request.getCpuLimit());
+        if (request.getMemoryLimit() != null) server.setMemoryLimit(request.getMemoryLimit());
+        if (request.getStorageGb() != null) server.setStorageGb(request.getStorageGb());
+
+        serverRepo.save(server);
+        auditService.log("SERVER_UPDATED", serverId, owner.getId(), null);
+
+        return ServerResponse.fromEntity(server, kubeService.getNodeExternalIp());
+    }
+
+    // ═══ File Manager ══════════════════════════════════════
+
+    private static final String DATA_DIR = "/data";
+
+    public List<FileEntry> listFiles(String serverId, String path, User owner) {
+        GameServer server = getOwnedServer(serverId, owner);
+        validateStatus(server, ServerStatus.RUNNING);
+
+        String safePath = sanitizePath(path);
+        String output = kubeService.execCommand(serverId,
+                "ls -1p '" + safePath + "' 2>/dev/null && echo '---DIR---' && " +
+                "ls -1la '" + safePath + "' 2>/dev/null | grep '^[-d]' | awk '{print $1, $5, $6, $7, $8, $9}'");
+
+        if (output.isBlank()) return List.of();
+
+        String[] parts = output.split("---DIR---");
+        if (parts.length < 2) return List.of();
+
+        String[] names = parts[0].trim().split("\n");
+        String[] details = parts[1].trim().split("\n");
+
+        List<FileEntry> result = new ArrayList<>();
+        for (int i = 0; i < names.length && i < details.length; i++) {
+            String name = names[i].trim();
+            if (name.equals(".") || name.equals("..")) continue;
+
+            boolean isDir = name.endsWith("/");
+            String cleanName = isDir ? name.substring(0, name.length() - 1) : name;
+
+            String[] detailParts = details[i].split("\\s+");
+            long size = 0;
+            String lastMod = "";
+            if (detailParts.length >= 6) {
+                size = isDir ? 0 : parseFileSize(detailParts[4]);
+                lastMod = detailParts[1] + " " + detailParts[2] + " " + detailParts[3];
+            }
+
+            result.add(FileEntry.builder()
+                    .name(cleanName)
+                    .path(safePath + "/" + cleanName)
+                    .size(size)
+                    .isDirectory(isDir)
+                    .lastModified(lastMod)
+                    .build());
+        }
+        return result;
+    }
+
+    public String readFile(String serverId, String path, User owner) {
+        GameServer server = getOwnedServer(serverId, owner);
+        validateStatus(server, ServerStatus.RUNNING);
+
+        String safePath = sanitizePath(path);
+        return kubeService.execCommand(serverId, "cat '" + safePath + "' 2>/dev/null || base64 '" + safePath + "' 2>/dev/null || echo ''");
+    }
+
+    public void writeFile(String serverId, String path, String content, User owner) {
+        GameServer server = getOwnedServer(serverId, owner);
+        validateStatus(server, ServerStatus.RUNNING);
+
+        String safePath = sanitizePath(path);
+        kubeService.execCommandWithInput(serverId,
+                "cat > '" + safePath + "'",
+                content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        log.info("Wrote file to server {}: {}", serverId, safePath);
+    }
+
+    public void uploadFile(String serverId, String path, byte[] content, User owner) {
+        GameServer server = getOwnedServer(serverId, owner);
+        validateStatus(server, ServerStatus.RUNNING);
+
+        String safePath = sanitizePath(path);
+        kubeService.execCommandWithInput(serverId,
+                "cat > '" + safePath + "'",
+                content);
+
+        log.info("Uploaded file to server {}: {} ({} bytes)", serverId, safePath, content.length);
+    }
+
+    public void deleteFilePath(String serverId, String path, User owner) {
+        GameServer server = getOwnedServer(serverId, owner);
+        validateStatus(server, ServerStatus.RUNNING);
+
+        String safePath = sanitizePath(path);
+        kubeService.execCommand(serverId, "rm -rf '" + safePath + "'");
+
+        log.info("Deleted file on server {}: {}", serverId, safePath);
+    }
+
+    private String sanitizePath(String path) {
+        String safe = path.replaceAll("[^a-zA-Z0-9_./\\-]", "");
+        Path resolved = Paths.get(DATA_DIR).resolve(safe).normalize();
+        if (!resolved.startsWith(Paths.get(DATA_DIR).normalize())) {
+            throw new SecurityException("Invalid path: traversal outside data directory");
+        }
+        return resolved.toString().replace('\\', '/');
+    }
+
+    private long parseFileSize(String size) {
+        try {
+            return Long.parseLong(size);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }

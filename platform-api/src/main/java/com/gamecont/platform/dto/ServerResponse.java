@@ -31,9 +31,10 @@ public class ServerResponse {
     private int storageGb;
 
     // Connection info
-    private String connectAddress;  // e.g., "54.123.45.67:30001"
+    private String connectAddress;  // e.g., "54.123.45.67:31001"
     private int gamePort;
     private Integer nodePort;
+    private Integer proxyPort;
 
     // Owner
     private String ownerId;
@@ -51,7 +52,9 @@ public class ServerResponse {
      */
     public static ServerResponse fromEntity(GameServer server, String hostIp) {
         String connectAddr = null;
-        if (server.getNodePort() != null && hostIp != null) {
+        if (server.getProxyPort() != null && hostIp != null) {
+            connectAddr = hostIp + ":" + server.getProxyPort();
+        } else if (server.getNodePort() != null && hostIp != null) {
             connectAddr = hostIp + ":" + server.getNodePort();
         }
 
@@ -69,6 +72,7 @@ public class ServerResponse {
                 .connectAddress(connectAddr)
                 .gamePort(server.getGamePort())
                 .nodePort(server.getNodePort())
+                .proxyPort(server.getProxyPort())
                 .ownerId(server.getOwner().getId())
                 .ownerUsername(server.getOwner().getUsername())
                 .createdAt(server.getCreatedAt())

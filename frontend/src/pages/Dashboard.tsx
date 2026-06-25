@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { fetchServers, isSimulatorMode, setSimulatorMode, pingBackend } from '../services/api';
+import { fetchServers, isSimulatorMode, setSimulatorMode } from '../services/api';
 import { ServerCard } from '../components/ServerCard/ServerCard';
 import { Button } from '../components/Button/Button';
 import { ServerCardSkeleton } from '../components/Skeleton/Skeleton';
 import styles from './Dashboard.module.css';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 function DashboardSkeleton() {
   return (
@@ -27,13 +27,6 @@ export function Dashboard() {
     refetchInterval: 10000,
     retry: 1,
   });
-
-  // Check connectivity on mount
-  useEffect(() => {
-    if (!isSimulatorMode()) {
-      pingBackend();
-    }
-  }, []);
 
   const handleEnableSimulator = () => {
     setSimulatorMode(true);

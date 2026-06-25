@@ -16,7 +16,13 @@ public interface GameServerRepository extends JpaRepository<GameServer, String> 
 
     Optional<GameServer> findByServerId(String serverId);
 
+    @Query("SELECT gs FROM GameServer gs JOIN FETCH gs.owner WHERE gs.owner.id = :ownerId")
+    List<GameServer> findByOwnerIdWithOwner(@Param("ownerId") String ownerId);
+
     List<GameServer> findByOwnerId(String ownerId);
+
+    @Query("SELECT gs.owner.id FROM GameServer gs WHERE gs.id = :id")
+    Optional<String> findOwnerIdById(@Param("id") String id);
 
     List<GameServer> findByStatus(ServerStatus status);
 
@@ -43,4 +49,9 @@ public interface GameServerRepository extends JpaRepository<GameServer, String> 
     List<GameServer> findByStatusIn(@Param("statuses") List<ServerStatus> statuses);
 
     boolean existsByServerId(String serverId);
+
+    Optional<GameServer> findByProxyPort(int proxyPort);
+
+    @Query("SELECT COUNT(gs) FROM GameServer gs WHERE gs.proxyPort IS NOT NULL")
+    long countAllocatedProxyPorts();
 }

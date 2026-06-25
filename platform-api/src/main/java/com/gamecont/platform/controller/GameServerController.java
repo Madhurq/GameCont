@@ -1,7 +1,9 @@
 package com.gamecont.platform.controller;
 
+import com.gamecont.platform.dto.CommandRequest;
 import com.gamecont.platform.dto.CreateServerRequest;
 import com.gamecont.platform.dto.ServerResponse;
+import com.gamecont.platform.dto.UpdateServerRequest;
 import com.gamecont.platform.model.User;
 import com.gamecont.platform.service.GameServerManager;
 import com.gamecont.platform.service.WakeOnConnectProxy;
@@ -115,11 +117,39 @@ public class GameServerController {
         return ResponseEntity.ok(response);
     }
 
+    @PatchMapping("/{id}")
+    @Operation(summary = "Update server configuration",
+               description = "Partially update server settings (name, max players, resources, etc.)")
+    public ResponseEntity<ServerResponse> updateServer(
+            @PathVariable("id") String serverId,
+            @Valid @RequestBody UpdateServerRequest request,
+            @AuthenticationPrincipal User owner) {
+        ServerResponse response = serverManager.updateServer(serverId, request, owner);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/command")
+    @Operation(summary = "Send a console command to a running server",
+               description = "Executes a command on the game server via RCON or stdin (e.g., /op player, /say hello). "
+                           + "Server must be in RUNNING status.")
+    public ResponseEntity<Void> sendCommand(
+            @PathVariable("id") String serverId,
+            @Valid @RequestBody CommandRequest request,
+            @AuthenticationPrincipal User owner) {
+        serverManager.sendCommand(serverId, request.getCommand(), owner);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/{id}/wake")
     @Operation(summary = "Wake a sleeping server (wake-on-connect)",
                description = "Triggered by a TCP proxy when a player tries to join a sleeping server. "
                            + "Scales to 1 replica and waits for readiness (~30-60s on t3.micro).")
-    public ResponseEntity<Void> wakeServer(@PathVariable("id") String serverId) {
+    public ResponseEntity<Void> wakeServer(
+            @PathVariable("id") String serverId,
+            @AuthenticationPrincipal User owner) {
+        if (!serverManager.ownsServer(serverId, owner.getId())) {
+            throw new SecurityException("You do not own this server");
+        }
         boolean woken = wakeProxy.wakeServer(serverId);
         if (woken) {
             return ResponseEntity.ok().build();
