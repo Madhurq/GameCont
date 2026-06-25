@@ -6,7 +6,6 @@ import { Button } from '../components/Button/Button';
 import { Input } from '../components/Input/Input';
 import { Card } from '../components/Card/Card';
 import { useToast } from '../hooks/useToast';
-import type { GameType } from '../types';
 import styles from './EditServer.module.css';
 
 const cpuOptions = ['250m', '500m', '1000m', '2000m', '4000m'];

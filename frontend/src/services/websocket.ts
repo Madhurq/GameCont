@@ -1,4 +1,4 @@
-import { Client, Subscription } from '@stomp/stompjs';
+import { Client, type StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { isSimulatorMode } from './api';
 
@@ -61,7 +61,7 @@ export function setupWebSocket(
 
   // ── Live Mode: STOMP over SockJS ────────────────────────────────
   let stopped = false;
-  let subscription: Subscription | null = null;
+  let subscription: StompSubscription | null = null;
 
   const client = new Client({
     webSocketFactory: () => new SockJS(WS_URL) as any,

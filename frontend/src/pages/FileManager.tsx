@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { listFiles, readFile, writeFile, deleteFilePath, uploadFile } from '../services/api';
 import type { FileEntry } from '../services/api';
 import { Button } from '../components/Button/Button';
@@ -12,7 +12,6 @@ import styles from './FileManager.module.css';
 export function FileManager() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [currentPath, setCurrentPath] = useState('/data');
   const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null);

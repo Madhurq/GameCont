@@ -29,7 +29,7 @@ export function ServerDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { actionLoading, commandSending, start, stop, restart, remove, send } = useServerActions(id!);
+  const { actionLoading, commandSending, start, stop, restart, send } = useServerActions(id!);
   const [confirmAction, setConfirmAction] = useState<'stop' | 'restart' | 'delete' | null>(null);
   const [copied, setCopied] = useState(false);
 
