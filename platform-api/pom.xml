@@ -45,7 +45,7 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
         <dependency>
-            <!-- Exposes /actuator/health, /actuator/prometheus, etc. -->
+            <!-- Exposes /actuator/health, /actuator/info, etc. -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>

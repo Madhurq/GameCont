@@ -3,6 +3,8 @@
 A Kubernetes-powered platform where users create, manage, and auto-scale dedicated game servers through a dashboard.
 
 > **Built for AWS Free Tier** — Designed to run on a single `t3.micro` EC2 instance with K3s (lightweight Kubernetes). Zero cost within AWS Free Tier limits.
+>
+> **Local Development** — Everything works on your machine with Kind (local K8s), Docker Compose, and the frontend dev server.
 
 ## Architecture
 
@@ -121,24 +123,69 @@ gamecont/
 - Java 21+
 - Maven 3.9+
 - Docker & Docker Compose
-- (Optional) kubectl + K3s/Kind for local K8s testing
+- Kind (Kubernetes in Docker) — `go install sigs.k8s.io/kind@latest` or `choco install kind`
+- kubectl
 
-### 1. Start infrastructure
+### 1. Create local K8s cluster
+```bash
+kind create cluster --config k8s/kind-config.yaml
+```
+
+This creates a Kind cluster with ports 30000-30005 mapped for Minecraft server NodePort access.
+
+### 2. Start infrastructure
 ```bash
 docker compose up -d
 ```
-This starts PostgreSQL and Redis locally.
 
-### 2. Run the platform API
+This starts PostgreSQL (port 5433) and Redis locally.
+
+### 3. Set up frontend env
+If you don't have a `.env.local` file yet, copy the example:
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+Edit `.env.local` to point to `localhost`:
+```env
+VITE_API_URL=http://localhost:8080/api
+VITE_WS_URL=http://localhost:8080/ws
+```
+
+### 4. Run the platform API
 ```bash
 cd platform-api
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-### 3. Access
+The API starts on port 8080. It connects to your local Kind cluster via `~/.kube/config`, and uses Docker Compose PostgreSQL + Redis.
+
+### 5. Run the frontend
+```bash
+cd frontend
+npm install   # first time only
+npm run dev
+```
+
+### 6. Access
+- **Frontend**: http://localhost:5173
 - **API**: http://localhost:8080
 - **Swagger UI**: http://localhost:8080/swagger-ui.html
 - **Actuator Health**: http://localhost:8080/actuator/health
+
+### Simulator mode (frontend only)
+The frontend can run standalone without a backend:
+```bash
+cd frontend
+npm run dev
+```
+It ships with mock data and a fake WebSocket log stream. Log in with any username/password.
+
+### Local dev note: connect address
+When running locally, the `connectAddress` returned by the API uses the Kind node's Docker IP (e.g., `172.18.0.x:31001`) instead of `localhost`. Your Minecraft client can't reach Docker-internal IPs directly. There are two workarounds:
+
+- **Set `platformPublicIp`** via K8s ConfigMap: `kubectl create configmap platform-config -n gamecont-platform --from-literal=public-ip=localhost`
+- **Or just connect manually** using the proxy port shown in the server detail UI: `localhost:<proxyPort>`
 ## API Overview
 
 ```

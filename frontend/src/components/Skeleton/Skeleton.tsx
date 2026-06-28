@@ -43,14 +43,3 @@ export function ServerCardSkeleton() {
   );
 }
 
-export function MetricChartSkeleton() {
-  return (
-    <div className={styles.chart}>
-      <div className={styles.chartHeader}>
-        <Skeleton variant="text" width={60} height={16} />
-        <Skeleton variant="text" width={80} height={24} />
-      </div>
-      <Skeleton variant="rectangular" width="100%" height={120} />
-    </div>
-  );
-}

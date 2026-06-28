@@ -56,6 +56,9 @@ terraform/.terraform.lock.hcl
 # === Ansible ===
 ansible/*.retry
 
+# === Kind ===
+kind-*.exe
+
 # === Secrets (NEVER commit these) ===
 *.pem
 *.key
