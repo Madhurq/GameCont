@@ -5,8 +5,9 @@
 # Prevents any single user (or bug) from exhausting the cluster.
 #
 # ⚠️ AWS Free Tier (t3.micro): 2 vCPU (burst), 1 GB RAM total.
-#    After K3s + platform API, ~600 MB RAM and 1 vCPU is left
-#    for game servers. These quotas reflect that constraint.
+#    Since we configure a 2 GB Swap file (3 GB virtual memory total),
+#    these quotas are bumped to allow running game servers with 1Gi memory limits
+#    and sidecars without exceeding namespace resource limits.
 #
 # Scaling beyond Free Tier: Increase these values when adding
 # worker nodes or upgrading to a larger instance type.
@@ -22,9 +23,9 @@ spec:
   hard:
     # Compute limits for the entire namespace
     requests.cpu: "1"           # 1 vCPU total across all game servers
-    requests.memory: "512Mi"    # 512 MB total requests
+    requests.memory: "1Gi"      # 1 GB total requests
     limits.cpu: "2"             # 2 vCPU burst total
-    limits.memory: "1Gi"        # 1 GB hard limit
+    limits.memory: "2Gi"        # 2 GB hard limit
 
     # Storage limits
     persistentvolumeclaims: "5" # Max 5 PVCs (world data volumes)

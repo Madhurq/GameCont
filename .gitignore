@@ -29,6 +29,7 @@ bin/
 .DS_Store
 Thumbs.db
 desktop.ini
+nul
 
 # === Node / Frontend ===
 node_modules/

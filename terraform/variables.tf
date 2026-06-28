@@ -25,6 +25,18 @@ variable "key_name" {
   type        = string
 }
 
+variable "db_password" {
+  description = "PostgreSQL master password"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_username" {
+  description = "PostgreSQL master username"
+  type        = string
+  default     = "gamecont"
+}
+
 variable "my_ip" {
   description = "Your public IP for SSH access (e.g., '203.0.113.0/32')"
   type        = string

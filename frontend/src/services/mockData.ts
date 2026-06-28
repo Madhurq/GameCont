@@ -1,4 +1,4 @@
-import type { GameServer, ServerMetrics, ConsoleLogEntry } from '../types';
+import type { GameServer } from '../types';
 
 let serverIdCounter = 0;
 const generateId = () => `gs-${(++serverIdCounter).toString(36).padStart(8, '0')}`;
@@ -126,56 +126,4 @@ export const mockServers: GameServer[] = [
   },
 ];
 
-let metricsCallCount = 0;
 
-export function generateMockMetrics(serverId: string): ServerMetrics {
-  metricsCallCount++;
-  return {
-    serverId,
-    playersOnline: Math.floor(Math.abs(Math.sin(metricsCallCount * 0.1)) * 20),
-    maxPlayers: 20,
-    tps: 20 - Math.abs(Math.sin(metricsCallCount * 0.05)) * 5,
-    memoryUsedBytes: 256 + Math.floor(Math.abs(Math.sin(metricsCallCount * 0.07)) * 512) * 1024 * 1024,
-    memoryMaxBytes: 1024 * 1024 * 1024,
-    uptimeSeconds: metricsCallCount * 5 * 60,
-    metricsAvailable: true,
-  };
-}
-
-export function generateMockLogs(): ConsoleLogEntry[] {
-  const logs: ConsoleLogEntry[] = [];
-  const levels = ['INFO', 'WARN', 'INFO', 'INFO', 'DEBUG'] as const;
-  const messages = [
-    'Server tick completed (20.0ms)',
-    'Chunk load at [64, 32]',
-    'Player "Steve" joined the game',
-    'Auto-save complete',
-    'Entity tick pool: 42 entities',
-    'Memory: 342MB / 1024MB',
-    'GC pause: 12ms',
-    'Backup task queued',
-    'TPS: 20.0 (target: 20.0)',
-    'Network: 0.2ms avg latency',
-  ];
-  const now = Date.now();
-  for (let i = 0; i < 20; i++) {
-    logs.push({
-      timestamp: new Date(now - (20 - i) * 3000).toISOString(),
-      level: levels[Math.floor(Math.random() * levels.length)],
-      message: messages[Math.floor(Math.random() * messages.length)],
-    });
-  }
-  return logs;
-}
-
-export function getServerStatusLabel(status: string): string {
-  const map: Record<string, string> = {
-    STARTING: 'Starting',
-    RUNNING: 'Running',
-    STOPPING: 'Stopping',
-    STOPPED: 'Stopped',
-    SLEEPING: 'Sleeping',
-    ERROR: 'Error',
-  };
-  return map[status] ?? status;
-}

@@ -4,7 +4,6 @@ import com.gamecont.platform.config.GameContProperties;
 import com.gamecont.platform.model.GameServer;
 import com.gamecont.platform.model.ServerStatus;
 import com.gamecont.platform.repository.GameServerRepository;
-import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -40,18 +39,15 @@ public class IdleServerReaper {
     private final KubernetesService kubeService;
     private final AuditService auditService;
     private final GameContProperties properties;
-    private final MeterRegistry meterRegistry;
 
     public IdleServerReaper(GameServerRepository serverRepo,
                             KubernetesService kubeService,
                             AuditService auditService,
-                            GameContProperties properties,
-                            MeterRegistry meterRegistry) {
+                            GameContProperties properties) {
         this.serverRepo = serverRepo;
         this.kubeService = kubeService;
         this.auditService = auditService;
         this.properties = properties;
-        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -100,8 +96,7 @@ public class IdleServerReaper {
         server.setStatus(ServerStatus.SLEEPING);
         serverRepo.save(server);
 
-        // Metrics + audit
-        meterRegistry.counter("gamecont_servers_scaled_to_zero").increment();
+        // Audit
         auditService.log("SERVER_SCALED_TO_ZERO", serverId, server.getOwner().getId(),
                 "Idle for " + properties.getServerDefaults().getIdleTimeoutMinutes() + " min");
 

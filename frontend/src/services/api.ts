@@ -1,13 +1,9 @@
-import type { GameServer, ServerMetrics, CreateServerRequest, AuthResponse, LoginRequest, RegisterRequest, FriendshipResponse } from '../types';
-import { mockServers, generateMockMetrics } from './mockData';
+import type { GameServer, CreateServerRequest, AuthResponse, LoginRequest, RegisterRequest, FriendshipResponse } from '../types';
+import { mockServers } from './mockData';
 
 // ─── Config ───────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
-/** Whether we've detected the backend is unreachable. */
-let _offlineDetected = false;
-
-/** The user can opt into simulator mode manually. */
 let _simulatorMode = false;
 
 export function isSimulatorMode(): boolean {
@@ -18,9 +14,6 @@ export function setSimulatorMode(v: boolean): void {
   _simulatorMode = v;
 }
 
-export function isOfflineDetected(): boolean {
-  return _offlineDetected;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 function getToken(): string | null {
@@ -41,21 +34,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       headers: { ...authHeaders(), ...(init?.headers || {}) },
     });
 
-    // Reset offline flag on successful contact
-    _offlineDetected = false;
-
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       throw new Error(body || `HTTP ${res.status}`);
     }
 
-    return res.json();
+    const text = await res.text();
+    return text ? JSON.parse(text) : {} as T;
   } catch (err: any) {
-    // Network errors (CORS, refused, timeout) → mark offline
-    if (err instanceof TypeError && err.message.includes('fetch')) {
-      _offlineDetected = true;
-      throw new Error('BACKEND_OFFLINE');
-    }
     throw err;
   }
 }
@@ -146,14 +132,6 @@ export async function createServer(data: CreateServerRequest): Promise<GameServe
     method: 'POST',
     body: JSON.stringify(data),
   });
-}
-
-export async function fetchMetrics(serverId: string): Promise<ServerMetrics> {
-  if (isSimulatorMode()) {
-    await delay(200);
-    return generateMockMetrics(serverId);
-  }
-  return apiFetch<ServerMetrics>(`/servers/${serverId}/metrics`);
 }
 
 export async function startServer(id: string): Promise<GameServer> {
@@ -301,21 +279,6 @@ export async function uploadFile(serverId: string, path: string, file: File): Pr
     method: 'POST',
     body: formData,
   });
-}
-
-/** Ping the backend to check connectivity — used by the offline banner. */
-export async function pingBackend(): Promise<boolean> {
-  try {
-    await fetch(`${API_BASE.replace('/api', '')}/swagger-ui.html`, {
-      method: 'HEAD',
-      mode: 'no-cors',
-    });
-    _offlineDetected = false;
-    return true;
-  } catch {
-    _offlineDetected = true;
-    return false;
-  }
 }
 
 // ─── Friends API ──────────────────────────────────────────────────────

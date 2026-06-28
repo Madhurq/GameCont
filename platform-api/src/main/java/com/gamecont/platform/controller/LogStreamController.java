@@ -114,7 +114,6 @@ public class LogStreamController {
      * Stop streaming logs for a game server.
      * Client sends a STOMP message to: /app/logs/{serverId}/stop
      */
-    @MessageMapping("/logs/{serverId}/stop")
     @PreDestroy
     public void cleanup() {
         activeStreams.values().forEach(lw -> {
@@ -124,6 +123,7 @@ public class LogStreamController {
         log.info("Closed all active log streams");
     }
 
+    @MessageMapping("/logs/{serverId}/stop")
     public void stopLogStream(@DestinationVariable String serverId) {
         GameServer server = serverRepo.findByServerId(serverId)
                 .orElseGet(() -> serverRepo.findById(serverId).orElse(null));

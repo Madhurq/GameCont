@@ -19,14 +19,10 @@ public interface GameServerRepository extends JpaRepository<GameServer, String> 
     @Query("SELECT gs FROM GameServer gs JOIN FETCH gs.owner WHERE gs.owner.id = :ownerId")
     List<GameServer> findByOwnerIdWithOwner(@Param("ownerId") String ownerId);
 
-    List<GameServer> findByOwnerId(String ownerId);
-
     @Query("SELECT gs.owner.id FROM GameServer gs WHERE gs.id = :id")
     Optional<String> findOwnerIdById(@Param("id") String id);
 
     List<GameServer> findByStatus(ServerStatus status);
-
-    List<GameServer> findByOwnerIdAndStatus(String ownerId, ServerStatus status);
 
     long countByOwnerId(String ownerId);
 
@@ -40,15 +36,6 @@ public interface GameServerRepository extends JpaRepository<GameServer, String> 
         @Param("status") ServerStatus status,
         @Param("cutoff") Instant cutoff
     );
-
-    /**
-     * Find all servers in RUNNING or SLEEPING status for the dashboard overview.
-     */
-    @Query("SELECT gs FROM GameServer gs WHERE gs.status IN (:statuses) " +
-           "ORDER BY gs.createdAt DESC")
-    List<GameServer> findByStatusIn(@Param("statuses") List<ServerStatus> statuses);
-
-    boolean existsByServerId(String serverId);
 
     Optional<GameServer> findByProxyPort(int proxyPort);
 

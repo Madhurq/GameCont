@@ -58,23 +58,6 @@ export interface CreateServerRequest {
   customImage?: string;
 }
 
-export interface ServerMetrics {
-  serverId: string;
-  playersOnline: number;
-  maxPlayers: number;
-  tps: number;
-  memoryUsedBytes: number;
-  memoryMaxBytes: number;
-  uptimeSeconds: number;
-  metricsAvailable: boolean;
-}
-
-export interface ConsoleLogEntry {
-  timestamp: string;
-  level: string;
-  message: string;
-}
-
 export interface FriendshipResponse {
   id: string;
   friendId: string;

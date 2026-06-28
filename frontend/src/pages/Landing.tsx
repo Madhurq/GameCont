@@ -35,13 +35,6 @@ const features = [
   },
 ];
 
-const stats = [
-  { value: '99.9%', label: 'Uptime SLA' },
-  { value: '<15ms', label: 'Avg Latency' },
-  { value: '50K+', label: 'Servers Deployed' },
-  { value: '2M+', label: 'Players Online' },
-];
-
 export function Landing() {
   const navigate = useNavigate();
 
@@ -56,7 +49,6 @@ export function Landing() {
           </div>
           <div className={styles.navLinks}>
             <a href="#features" className={styles.navLink}>Features</a>
-            <a href="#stats" className={styles.navLink}>Stats</a>
             <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
               Sign In
             </Button>
@@ -121,18 +113,6 @@ export function Landing() {
             <span className={styles.metaSep}>·</span>
             <span>Cancel anytime</span>
           </div>
-        </div>
-      </section>
-
-      {/* ── Stats ──────────────────────────────────────────────── */}
-      <section id="stats" className={styles.stats}>
-        <div className={styles.statsGrid}>
-          {stats.map((s) => (
-            <div key={s.label} className={`${styles.statCard} cyber-frame`}>
-              <span className={styles.statValue}>{s.value}</span>
-              <span className={styles.statLabel}>{s.label}</span>
-            </div>
-          ))}
         </div>
       </section>
 

@@ -138,14 +138,16 @@ public class GameServerManager {
             Map<String, String> config = buildServerConfig(server);
             kubeService.createConfigMap(serverId, config);
 
-            // 4. Create Deployment (game server + metrics sidecar)
+            // 4. Create Deployment
             String image = getImageForGameType(server.getGameType());
             GameContProperties.ServerDefaults defaults = properties.getServerDefaults();
+            boolean onlineMode = (server.getGameType() != GameType.MINECRAFT_MODDED);
             kubeService.createDeployment(
                     serverId, image, owner.getId(),
                     defaults.getCpuRequest(), server.getCpuLimit(),
                     defaults.getMemoryRequest(), server.getMemoryLimit(),
-                    server.getGamePort()
+                    server.getGamePort(), onlineMode,
+                    server.getGameType()
             );
 
             // 5. Create NodePort Service
@@ -293,8 +295,8 @@ public class GameServerManager {
     private String getImageForGameType(GameType gameType) {
         return switch (gameType) {
             case MINECRAFT_VANILLA -> "itzg/minecraft-server:latest";
-            case MINECRAFT_MODDED -> "itzg/minecraft-server:latest"; // Same image, different ENV
-            case CUSTOM -> "ghcr.io/gamecont/custom-server:latest";
+            case MINECRAFT_MODDED -> "itzg/minecraft-server:latest";
+            case CUSTOM -> "ghcr.io/madhurq/custom-server:latest";
         };
     }
 

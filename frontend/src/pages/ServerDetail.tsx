@@ -2,17 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchServer, deleteServer, isSimulatorMode } from '../services/api';
-import { useMetricsPolling } from '../hooks/useMetricsPolling';
 import { useServerActions } from '../hooks/useServerActions';
 import { useToast } from '../hooks/useToast';
 import { Button } from '../components/Button/Button';
 import { Badge } from '../components/Badge/Badge';
 import { Card } from '../components/Card/Card';
-import { MetricChart } from '../components/MetricChart/MetricChart';
 import { Console } from '../components/Console/Console';
 import { StatusDot } from '../components/StatusDot/StatusDot';
 import { ConfirmModal } from '../components/ConfirmModal/ConfirmModal';
-import { MetricChartSkeleton } from '../components/Skeleton/Skeleton';
 import styles from './ServerDetail.module.css';
 
 const statusBadgeVariant: Record<string, 'success' | 'warning' | 'error' | 'info' | 'neutral'> = {
@@ -39,9 +36,6 @@ export function ServerDetail() {
     refetchInterval: 5000,
     enabled: !!id,
   });
-
-  const isLive = server?.status === 'RUNNING';
-  const metrics = useMetricsPolling(id!, isLive);
 
   const handleStop = async () => {
     await stop();
@@ -202,22 +196,6 @@ export function ServerDetail() {
         <Button variant="danger" size="sm" onClick={() => setConfirmAction('delete')}>
           &gt; Delete
         </Button>
-      </div>
-
-      <div className={styles.metricsGrid}>
-        {metrics.tps.length === 0 ? (
-          <>
-            <MetricChartSkeleton />
-            <MetricChartSkeleton />
-            <MetricChartSkeleton />
-          </>
-        ) : (
-          <>
-            <MetricChart title="TPS" data={metrics.tps} color="#00ff66" formatValue={(v) => v.toFixed(1)} />
-            <MetricChart title="Players" data={metrics.players} color="#00e5ff" />
-            <MetricChart title="Memory" data={metrics.memory} color="#8b5cf6" unit="MB" />
-          </>
-        )}
       </div>
 
       <div className={styles.resources}>

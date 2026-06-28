@@ -1,6 +1,6 @@
 # 🎮 GameCont — Multiplayer Game Server Hosting Platform
 
-A Kubernetes-powered platform where users create, manage, and auto-scale dedicated game servers through a dashboard. Each game server runs as a K8s Deployment with persistent storage, live metrics, and scale-to-zero capability.
+A Kubernetes-powered platform where users create, manage, and auto-scale dedicated game servers through a dashboard.
 
 > **Built for AWS Free Tier** — Designed to run on a single `t3.micro` EC2 instance with K3s (lightweight Kubernetes). Zero cost within AWS Free Tier limits.
 
@@ -9,7 +9,7 @@ A Kubernetes-powered platform where users create, manage, and auto-scale dedicat
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                    React Frontend                            │
-│  Server Dashboard · Create Server · Console · Analytics      │
+│  Server Dashboard · Create Server · Console                   │
 └─────────┬────────────────┬───────────────────────────────────┘
           │ REST            │ STOMP over WebSocket
     ┌─────▼──────────┐     │
@@ -20,7 +20,6 @@ A Kubernetes-powered platform where users create, manage, and auto-scale dedicat
     │ • Server CRUD  │
     │ • K8s API      │
     │ • Log Stream   │
-    │ • Metrics      │
     └──┬─────────────┘
        │
   ┌────▼───────────────────────────────────────────────┐
@@ -29,16 +28,10 @@ A Kubernetes-powered platform where users create, manage, and auto-scale dedicat
   │  ┌─────────────────────────────────────────────┐   │
   │  │ Namespace: gamecont-servers                  │   │
   │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐    │   │
-  │  │  │ Server-1 │ │ Server-2 │ │ Server-3 │    │   │
-  │  │  │ + metrics│ │ + metrics│ │ + metrics│    │   │
-  │  │  │  sidecar │ │  sidecar │ │  sidecar │    │   │
-  │  │  └──────────┘ └──────────┘ └──────────┘    │   │
-  │  └─────────────────────────────────────────────┘   │
-  │                                                     │
-  │  ┌──────────┐  ┌───────────┐  ┌───────────────┐   │
-  │  │ Postgres │  │   Redis   │  │  Prometheus   │   │
-  │  │ (RDS)    │  │ (in-pod)  │  │  + Grafana    │   │
-  │  └──────────┘  └───────────┘  └───────────────┘   │
+   │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐    │   │
+   │  │  │ Server-1 │ │ Server-2 │ │ Server-3 │    │   │
+   │  │  └──────────┘ └──────────┘ └──────────┘    │   │
+   │  └─────────────────────────────────────────────┘   │
   └────────────────────────────────────────────────────┘
 ```
 
@@ -72,8 +65,7 @@ This project is designed to run within **AWS Free Tier limits**:
 | **Database** | PostgreSQL (RDS) | Users, server configs, audit logs |
 | **Auth** | JWT (JJWT) | Stateless authentication |
 | **Real-time** | STOMP over WebSocket | Live log streaming, status updates |
-| **Metrics Sidecar** | Python + prometheus_client | Per-server game stats export |
-| **Monitoring** | Prometheus + Grafana | Metrics scraping, dashboards, alerts |
+
 | **Infrastructure** | Terraform + Ansible | AWS provisioning, K3s setup |
 | **CI/CD** | GitHub Actions | Automated test, build, deploy |
 | **Kubernetes** | K3s (lightweight K8s) | Game server orchestration |
@@ -98,11 +90,6 @@ gamecont/
 │   ├── pom.xml
 │   └── Dockerfile
 │
-├── metrics-exporter/          # Python sidecar for game stats
-│   ├── exporter.py
-│   ├── requirements.txt
-│   └── Dockerfile
-│
 ├── server-images/             # Game server Docker images
 │   ├── minecraft-vanilla/
 │   └── minecraft-modded/
@@ -123,10 +110,6 @@ gamecont/
 │   ├── playbooks/
 │   └── templates/
 │
-├── monitoring/                # Prometheus + Grafana configs
-│   ├── prometheus/
-│   └── grafana/
-│
 ├── .github/workflows/         # CI/CD pipelines
 ├── docker-compose.yml         # Local development stack
 └── README.md
@@ -144,7 +127,7 @@ gamecont/
 ```bash
 docker compose up -d
 ```
-This starts PostgreSQL, Redis, and Prometheus locally.
+This starts PostgreSQL and Redis locally.
 
 ### 2. Run the platform API
 ```bash
@@ -156,8 +139,6 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local
 - **API**: http://localhost:8080
 - **Swagger UI**: http://localhost:8080/swagger-ui.html
 - **Actuator Health**: http://localhost:8080/actuator/health
-- **Prometheus Metrics**: http://localhost:8080/actuator/prometheus
-
 ## API Overview
 
 ```
@@ -170,7 +151,6 @@ DELETE /api/servers/{id}           Delete a server
 POST   /api/servers/{id}/start    Start a stopped server
 POST   /api/servers/{id}/stop     Stop a running server
 POST   /api/servers/{id}/restart  Restart a server
-GET    /api/servers/{id}/metrics  Get live metrics
 WS     /ws                        STOMP WebSocket endpoint
 ```
 
@@ -179,7 +159,6 @@ WS     /ws                        STOMP WebSocket endpoint
 - **Dynamic Server Provisioning**: User clicks "Create" → K8s Deployment + Service + PVC created in ~30s
 - **Scale-to-Zero**: Idle servers (0 players for 10 min) auto-scale to 0 replicas, preserving world data on PVCs
 - **Wake-on-Connect**: TCP proxy detects player join attempts → wakes sleeping server in ~15s
-- **Live Metrics**: Python sidecar scrapes game stats → Prometheus → Grafana dashboards
 - **Real-time Logs**: STOMP WebSocket streams pod logs to the browser console
 - **Multi-tenant Isolation**: NetworkPolicies block server-to-server traffic, ResourceQuotas limit per-namespace resources
 

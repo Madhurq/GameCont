@@ -25,7 +25,7 @@ import java.util.List;
  *
  * Public endpoints (no auth required):
  * - POST /api/auth/** (register, login)
- * - GET  /actuator/health, /actuator/prometheus, /actuator/info
+ * - GET  /actuator/health, /actuator/info
  * - GET  /swagger-ui/**, /api-docs/**
  * - WS   /ws/** (WebSocket — auth handled via STOMP headers)
  *
@@ -59,7 +59,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/actuator/health", "/actuator/prometheus", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

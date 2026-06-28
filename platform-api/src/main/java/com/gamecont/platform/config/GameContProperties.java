@@ -17,7 +17,6 @@ public class GameContProperties {
     private Jwt jwt = new Jwt();
     private Kubernetes kubernetes = new Kubernetes();
     private ServerDefaults serverDefaults = new ServerDefaults();
-    private Prometheus prometheus = new Prometheus();
     private Proxy proxy = new Proxy();
 
     @Getter @Setter
@@ -41,11 +40,6 @@ public class GameContProperties {
         private int storageGb = 2;
         private int idleTimeoutMinutes = 10;
         private int maxServersPerUser = 3;
-    }
-
-    @Getter @Setter
-    public static class Prometheus {
-        private String url = "http://localhost:9090";
     }
 
     @Getter @Setter

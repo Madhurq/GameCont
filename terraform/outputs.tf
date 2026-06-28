@@ -17,7 +17,10 @@ output "platform_api_url" {
   value       = "http://${aws_eip.k3s.public_ip}:30080"
 }
 
-
+output "rds_endpoint" {
+  description = "RDS PostgreSQL endpoint"
+  value       = aws_db_instance.postgres.endpoint
+}
 
 output "kubeconfig_command" {
   description = "Command to copy kubeconfig from EC2 to local machine"

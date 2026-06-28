@@ -27,8 +27,14 @@ function formatTime(d: Date): string {
 }
 
 export function Console({ serverId, initialLogs = [], onSendCommand, commandSending }: ConsoleProps) {
+  const parseLevel = (line: string): { level: string; rest: string } => {
+    const m = line.match(/^(\[\d{2}:\d{2}:\d{2}\]\s*(\[[^\]]*\/)?)?(INFO|WARN|ERROR|FATAL|DEBUG)\]?:?\s*(.*)/i);
+    if (m) return { level: m[3].toUpperCase(), rest: m[4] };
+    return { level: '', rest: line };
+  };
+
   const [logs, setLogs] = useState<LogEntry[]>(
-    initialLogs.map((text) => ({ text, time: formatTime(new Date()) }))
+    initialLogs.filter(l => parseLevel(l).level !== 'DEBUG').map((text) => ({ text, time: formatTime(new Date()) }))
   );
   const [paused, setPaused] = useState(false);
   const [command, setCommand] = useState('');
@@ -37,6 +43,8 @@ export function Console({ serverId, initialLogs = [], onSendCommand, commandSend
 
   useEffect(() => {
     const cleanup = setupWebSocket(serverId, (msg) => {
+      const { level } = parseLevel(msg);
+      if (level === 'DEBUG') return;
       setLogs((prev) => [...prev.slice(-200), { text: msg, time: formatTime(new Date()) }]);
     });
     return cleanup;
@@ -47,14 +55,6 @@ export function Console({ serverId, initialLogs = [], onSendCommand, commandSend
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs, paused]);
-
-  const parseLevel = (line: string): { level: string; rest: string } => {
-    const match = line.match(/^\[(\w+)\]\s*(.*)/);
-    if (match) {
-      return { level: match[1], rest: match[2] };
-    }
-    return { level: '', rest: line };
-  };
 
   const sendCommand = () => {
     const trimmed = command.trim();
@@ -80,7 +80,7 @@ export function Console({ serverId, initialLogs = [], onSendCommand, commandSend
   const initialized = useRef(false);
   useEffect(() => {
     if (!initialized.current && initialLogs.length > 0) {
-      setLogs(initialLogs.map((text) => ({ text, time: formatTime(new Date()) })));
+      setLogs(initialLogs.filter(l => parseLevel(l).level !== 'DEBUG').map((text) => ({ text, time: formatTime(new Date()) })));
       initialized.current = true;
     }
   }, [initialLogs]);

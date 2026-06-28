@@ -7,23 +7,13 @@
 
 FROM itzg/minecraft-server:latest
 
-# Labels for GameCont platform identification
+# ponytail: :latest tracks upstream Java version (needed for MC 26.2+ which requires Java 25)
+
 LABEL maintainer="gamecont"
 LABEL com.gamecont.game-type="minecraft-vanilla"
 
-# Default environment variables (overridden by K8s ConfigMap)
+# ponytail: only EULA needed — TYPE, VERSION, MEMORY etc. match base defaults or are set via K8s env
 ENV EULA=TRUE
-ENV TYPE=VANILLA
-ENV VERSION=LATEST
-ENV MEMORY=512M
-ENV MAX_PLAYERS=10
-ENV DIFFICULTY=normal
-ENV GAMEMODE=survival
-ENV ENABLE_QUERY=true
-ENV QUERY_PORT=25565
-ENV ENABLE_RCON=true
-ENV RCON_PORT=25575
-# RCON password must be set via K8s environment variable at deployment time
 
 # Health check: verify server is accepting connections
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \

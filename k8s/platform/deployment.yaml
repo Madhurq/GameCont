@@ -73,6 +73,8 @@ metadata:
     component: api
 spec:
   replicas: 1  # Single replica for Free Tier
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: gamecont
@@ -82,15 +84,15 @@ spec:
       labels:
         app: gamecont
         component: api
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
-        prometheus.io/path: "/actuator/prometheus"
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 90
       serviceAccountName: gamecont-api
       containers:
         - name: api
-          image: ghcr.io/gamecont/platform-api:latest
+          image: ghcr.io/madhurq/platform-api:0.6
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
@@ -122,25 +124,40 @@ spec:
                 secretKeyRef:
                   name: gamecont-jwt
                   key: secret
-            - name: PROMETHEUS_URL
-              value: "http://prometheus.gamecont-platform.svc.cluster.local:9090"
+            - name: PLATFORM_PUBLIC_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: gamecont-config
+                  key: public-ip
+                  optional: true
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 10"]
           resources:
             requests:
               cpu: "100m"
-              memory: "256Mi"
+              memory: "512Mi"
             limits:
               cpu: "500m"
-              memory: "512Mi"
+              memory: "1Gi"
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 45
+            initialDelaySeconds: 10
             periodSeconds: 15
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /actuator/health
               port: 8080
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 5

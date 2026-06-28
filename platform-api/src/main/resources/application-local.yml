@@ -25,9 +25,6 @@ gamecont:
     # For local K8s testing, ensure KUBECONFIG points to your local cluster
     # e.g., Kind: ~/.kube/config or K3s: /etc/rancher/k3s/k3s.yaml
 
-  prometheus:
-    url: http://localhost:9090
-
   server-defaults:
     max-servers-per-user: 5       # More generous for local testing
 

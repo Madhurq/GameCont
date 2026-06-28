@@ -11,7 +11,7 @@ import java.time.Instant;
  * Represents a game server managed by the GameCont platform.
  *
  * Each GameServer maps 1:1 to a set of Kubernetes resources:
- * - Deployment (runs the game server container + metrics sidecar)
+ * - Deployment (runs the game server container)
  * - Service (NodePort — exposes game port to players)
  * - PersistentVolumeClaim (stores world data, survives restarts + scale-to-zero)
  * - ConfigMap (server configuration: server.properties, game mode, etc.)
@@ -66,23 +66,19 @@ public class GameServer {
     // These map directly to K8s container resource limits.
 
     @Column(name = "cpu_limit", length = 10)
-    @Builder.Default
-    private String cpuLimit = "500m";
+    private String cpuLimit;
 
     @Column(name = "memory_limit", length = 10)
-    @Builder.Default
-    private String memoryLimit = "512Mi";
+    private String memoryLimit;
 
     @Column(name = "storage_gb")
-    @Builder.Default
-    private int storageGb = 2;
+    private int storageGb;
 
     // ── Network ─────────────────────────────────────────────
 
     /** Container port for the game protocol (e.g., 25565 for Minecraft) */
     @Column(name = "game_port")
-    @Builder.Default
-    private int gamePort = 25565;
+    private int gamePort;
 
     /** K8s NodePort assigned to this server's Service (for external access) */
     @Column(name = "node_port")

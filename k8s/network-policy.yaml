@@ -4,8 +4,7 @@
 # Enforces strict isolation between game servers:
 #   1. Game servers CANNOT communicate with each other
 #   2. Game servers CAN receive traffic from external players
-#   3. Game servers CAN be scraped by Prometheus (metrics sidecar)
-#   4. Game servers CAN reach DNS (kube-dns) for name resolution
+#   3. Game servers CAN reach DNS (kube-dns) for name resolution
 #
 # This prevents a compromised game server from attacking
 # other tenants' servers on the same cluster.
@@ -46,14 +45,6 @@ spec:
     - ports:
         - port: 25565      # Minecraft default
           protocol: TCP
-    # Allow Prometheus to scrape the metrics sidecar
-    - ports:
-        - port: 9090        # Metrics exporter port
-          protocol: TCP
-      from:
-        - namespaceSelector:
-            matchLabels:
-              tier: platform  # Only from gamecont-platform namespace
 
 ---
 # Deny game server → game server (egress between pods in same namespace).

@@ -23,6 +23,7 @@ public class CreateServerRequest {
 
     @Min(value = 1, message = "At least 1 player slot required")
     @Max(value = 100, message = "Maximum 100 player slots")
+    @Builder.Default
     private int maxPlayers = 10;
 
     @Size(max = 20, message = "Region code too long")
@@ -38,7 +39,4 @@ public class CreateServerRequest {
     @Max(value = 100, message = "Maximum 100 GB storage")
     private Integer storageGb;
 
-    @Pattern(regexp = "^(|[a-zA-Z0-9][a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+:[a-zA-Z0-9_.-]+)$",
-             message = "Invalid Docker image format")
-    private String customImage;
 }

@@ -96,13 +96,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- ═══ Monitoring ═══ -->
-        <!-- Exposes Micrometer metrics in Prometheus format at /actuator/prometheus -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
-
         <!-- ═══ API Documentation ═══ -->
         <!-- Auto-generates OpenAPI spec + Swagger UI at /swagger-ui.html -->
         <dependency>

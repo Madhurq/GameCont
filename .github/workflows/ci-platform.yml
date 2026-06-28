@@ -18,7 +18,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/gamecont-platform
+  IMAGE_NAME: ${{ github.repository_owner }}/platform-api
   JAVA_VERSION: '21'
 
 jobs:
@@ -103,12 +103,31 @@ jobs:
           script: |
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            # Rolling restart with the new image
+            # Force-delete any stuck Terminating pods from previous rollouts
+            kubectl delete pods \
+              --namespace gamecont-platform \
+              --field-selector=status.phase!=Running \
+              --force --grace-period=0 2>/dev/null || true
+
+            # Update the deployment image and record the change
             kubectl set image deployment/gamecont-api \
               api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-              --namespace gamecont-platform
+              --namespace gamecont-platform \
+              --record
 
-            # Wait for rollout
+            # Wait for rollout (increased timeout for Recreate strategy)
             kubectl rollout status deployment/gamecont-api \
               --namespace gamecont-platform \
-              --timeout=120s
+              --timeout=300s || {
+
+              echo "Rollout failed. Rolling back..."
+              kubectl rollout undo deployment/gamecont-api \
+                --namespace gamecont-platform
+
+              kubectl rollout status deployment/gamecont-api \
+                --namespace gamecont-platform \
+                --timeout=300s
+
+              echo "Rollback complete. Deployment failed."
+              exit 1
+            }

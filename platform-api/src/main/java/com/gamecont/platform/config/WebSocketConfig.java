@@ -34,7 +34,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // Enable simple in-memory broker for /topic destinations
-        // (server → client push for logs, status, metrics)
+        // (server → client push for logs, status)
         config.enableSimpleBroker("/topic");
 
         // Prefix for messages FROM clients TO server
